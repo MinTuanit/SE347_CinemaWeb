@@ -4,6 +4,19 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ItemsModule } from './items/items.module';
+import { AdminsModule } from './modules/admins/admins.module';
+import { CinemasModule } from './modules/cinemas/cinemas.module';
+import { CustomersModule } from './modules/customers/customers.module';
+import { Invoice_productsModule } from './modules/invoice_products/invoice_products.module';
+import { InvoicesModule } from './modules/invoices/invoices.module';
+import { MoviesModule } from './modules/movies/movies.module';
+import { ProductsModule } from './modules/products/products.module';
+import { RatingsModule } from './modules/ratings/ratings.module';
+import { RoomsModule } from './modules/rooms/rooms.module';
+import { SavesModule } from './modules/saves/saves.module';
+import { SeatsModule } from './modules/seats/seats.module';
+import { ShowtimesModule } from './modules/showtimes/showtimes.module';
+import { TicketsModule } from './modules/tickets/tickets.module';
 
 @Module({
   imports: [
@@ -16,8 +29,21 @@ import { ItemsModule } from './items/items.module';
     // Feature modules
     AuthModule,
     ItemsModule,
+    AdminsModule,
+    CinemasModule,
+    CustomersModule,
+    Invoice_productsModule,
+    InvoicesModule,
+    MoviesModule,
+    ProductsModule,
+    RatingsModule,
+    RoomsModule,
+    SavesModule,
+    SeatsModule,
+    ShowtimesModule,
+    TicketsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
