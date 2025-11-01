@@ -1,11 +1,10 @@
 import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
 import { SavesService } from './saves.service';
 import { CreateSavesDto } from './dto/create-saves.dto';
-import { UpdateSavesDto } from './dto/update-saves.dto';
 
 @Controller('saves')
 export class SavesController {
-  constructor(private readonly service: SavesService) {}
+  constructor(private readonly service: SavesService) { }
 
   @Post()
   create(@Body() dto: CreateSavesDto) {
@@ -17,18 +16,16 @@ export class SavesController {
     return this.service.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  @Get(':customer_id')
+  findOne(@Param('customer_id') customer_id: string) {
+    return this.service.findOne(customer_id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateSavesDto) {
-    return this.service.update(id, dto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  @Delete(':customer_id/:movie_id')
+  remove(
+    @Param('customer_id') customer_id: string,
+    @Param('movie_id') movie_id: string,
+  ) {
+    return this.service.remove(customer_id, movie_id);
   }
 }
