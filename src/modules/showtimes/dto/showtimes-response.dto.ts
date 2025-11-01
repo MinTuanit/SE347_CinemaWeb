@@ -17,7 +17,7 @@ export class ShowtimesResponseDto {
   end_time: string;
 
   @ApiProperty()
-  price: string;
+  price: number;
 
   @ApiProperty()
   created_at: string;

@@ -1,26 +1,74 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { CreateShowtimesDto } from './dto/create-showtimes.dto';
 import { UpdateShowtimesDto } from './dto/update-showtimes.dto';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class ShowtimesService {
-  create(dto: CreateShowtimesDto) {
-    return 'Create showtimes';
+  constructor(
+    @Inject('SUPABASE_CLIENT')
+    private readonly supabase: SupabaseClient,
+  ) { }
+
+  async create(dto: CreateShowtimesDto) {
+    const newShowtime = {
+      showtime_id: uuidv4(), // generate UUID
+      ...dto,
+      created_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await this.supabase
+      .from('showtimes')
+      .insert(newShowtime)
+      .select();
+
+    if (error) throw error;
+    return data;
   }
 
-  findAll() {
-    return 'Find all showtimes';
+  // Get all showtimes
+  async findAll() {
+    const { data, error } = await this.supabase
+      .from('showtimes')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
   }
 
-  findOne(id: string) {
-    return 'Find one showtimes';
+  // Get a showtime by ID
+  async findOne(id: string) {
+    const { data, error } = await this.supabase
+      .from('showtimes')
+      .select('*')
+      .eq('showtime_id', id);
+
+    if (error) throw error;
+    return data;
   }
 
-  update(id: string, dto: UpdateShowtimesDto) {
-    return 'Update showtimes';
+  // Update showtime
+  async update(id: string, dto: UpdateShowtimesDto) {
+    const { data, error } = await this.supabase
+      .from('showtimes')
+      .update(dto)
+      .eq('showtime_id', id)
+      .select();
+
+    if (error) throw error;
+    return data;
   }
 
-  remove(id: string) {
-    return 'Remove showtimes';
+  // Delete showtime
+  async remove(id: string) {
+    const { error } = await this.supabase
+      .from('showtimes')
+      .delete()
+      .eq('showtime_id', id);
+
+    if (error) throw error;
+    return { message: `Showtime with id ${id} deleted successfully` };
   }
 }
