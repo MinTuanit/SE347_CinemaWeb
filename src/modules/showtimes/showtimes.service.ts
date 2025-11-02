@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { CreateShowtimesDto } from './dto/create-showtimes.dto';
 import { UpdateShowtimesDto } from './dto/update-showtimes.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -28,10 +28,20 @@ export class ShowtimesService {
   }
 
   // Get all showtimes
+  // async findAll() {
+  //   const { data, error } = await this.supabase
+  //     .from('showtimes')
+  //     .select('*')
+  //     .order('created_at', { ascending: false });
+
+  //   if (error) throw error;
+  //   return data;
+  // }
+
   async findAll() {
     const { data, error } = await this.supabase
       .from('showtimes')
-      .select('*')
+      .select('*, cinemas(cinema_id, name), rooms(room_id, name), movies(movie_id, title)')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -42,10 +52,11 @@ export class ShowtimesService {
   async findOne(id: string) {
     const { data, error } = await this.supabase
       .from('showtimes')
-      .select('*')
+      .select('*, cinemas(cinema_id, name), rooms(room_id, name), movies(movie_id, title)')
       .eq('showtime_id', id);
 
     if (error) throw error;
+    if (!data || data.length === 0) throw new NotFoundException(`Showtime ${id} not found`);
     return data;
   }
 

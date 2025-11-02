@@ -1,14 +1,41 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class ShowtimesResponseDto {
+class CinemaDto {
   @ApiProperty()
-  showtime_id: string;
+  cinema_id: string;
 
+  @ApiProperty()
+  name: string;
+}
+
+class RoomDto {
+  @ApiProperty()
+  room_id: string;
+
+  @ApiProperty()
+  name: string;
+}
+
+class MovieDto {
   @ApiProperty()
   movie_id: string;
 
   @ApiProperty()
-  room_id: string;
+  title: string;
+}
+
+export class ShowtimesResponseDto {
+  @ApiProperty()
+  showtime_id: string;
+
+  @ApiProperty({ type: () => CinemaDto })
+  cinema: CinemaDto;
+
+  @ApiProperty({ type: () => RoomDto })
+  room: RoomDto;
+
+  @ApiProperty({ type: () => MovieDto })
+  movie: MovieDto;
 
   @ApiProperty()
   start_time: string;
@@ -19,6 +46,6 @@ export class ShowtimesResponseDto {
   @ApiProperty()
   price: number;
 
-  @ApiProperty()
-  created_at: string;
+  @ApiProperty({ required: false })
+  created_at?: string;
 }

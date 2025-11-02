@@ -1,26 +1,74 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { CreateTicketsDto } from './dto/create-tickets.dto';
 import { UpdateTicketsDto } from './dto/update-tickets.dto';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class TicketsService {
-  create(dto: CreateTicketsDto) {
-    return 'Create tickets';
+  constructor(
+    @Inject('SUPABASE_CLIENT')
+    private readonly supabase: SupabaseClient,
+  ) { }
+
+  async create(dto: CreateTicketsDto) {
+    const newTicket = {
+      ticket_id: uuidv4(), // generate UUID
+      ...dto,
+      created_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await this.supabase
+      .from('tickets')
+      .insert(newTicket)
+      .select();
+
+    if (error) throw error;
+    return data;
   }
 
-  findAll() {
-    return 'Find all tickets';
+  // Get all tickets
+  async findAll() {
+    const { data, error } = await this.supabase
+      .from('tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
   }
 
-  findOne(id: string) {
-    return 'Find one tickets';
+  // Get a ticket by ID
+  async findOne(id: string) {
+    const { data, error } = await this.supabase
+      .from('tickets')
+      .select('*')
+      .eq('ticket_id', id);
+
+    if (error) throw error;
+    return data;
   }
 
-  update(id: string, dto: UpdateTicketsDto) {
-    return 'Update tickets';
+  // Update ticket
+  async update(id: string, dto: UpdateTicketsDto) {
+    const { data, error } = await this.supabase
+      .from('tickets')
+      .update(dto)
+      .eq('ticket_id', id)
+      .select();
+
+    if (error) throw error;
+    return data;
   }
 
-  remove(id: string) {
-    return 'Remove tickets';
+  // Delete ticket
+  async remove(id: string) {
+    const { error } = await this.supabase
+      .from('tickets')
+      .delete()
+      .eq('ticket_id', id);
+
+    if (error) throw error;
+    return { message: `Ticket with id ${id} deleted successfully` };
   }
 }

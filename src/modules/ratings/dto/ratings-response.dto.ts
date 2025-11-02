@@ -1,21 +1,40 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class RatingsResponseDto {
-  @ApiProperty()
-  rating_id: string;
-
+class CustomerDto {
   @ApiProperty()
   customer_id: string;
 
   @ApiProperty()
+  full_name: string;
+
+  @ApiProperty()
+  email: string;
+}
+
+class MovieDto {
+  @ApiProperty()
   movie_id: string;
 
   @ApiProperty()
-  rating_value: string;
+  title: string;
+}
+
+export class RatingsResponseDto {
+  @ApiProperty()
+  rating_id: string;
+
+  @ApiProperty({ type: () => CustomerDto })
+  customer: CustomerDto;
+
+  @ApiProperty({ type: () => MovieDto })
+  movie: MovieDto;
 
   @ApiProperty()
-  review: string;
+  rating_value: number;
 
-  @ApiProperty()
-  created_at: string;
+  @ApiProperty({ required: false })
+  review?: string;
+
+  @ApiProperty({ required: false })
+  created_at?: string;
 }
