@@ -1,6 +1,7 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { CreateRatingsDto } from './dto/create-ratings.dto';
 import { UpdateRatingsDto } from './dto/update-ratings.dto';
+import { RatingsResponseDto } from './dto/ratings-response.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { SupabaseClient } from '@supabase/supabase-js';
 
@@ -29,26 +30,51 @@ export class RatingsService {
   }
 
   // READ ALL
-  async findAll() {
+  async findAll(): Promise<RatingsResponseDto[]> {
     const { data, error } = await this.supabase
       .from('ratings')
-      .select('*')
+      .select(`
+        *,
+        customers(customer_id, full_name, email),
+        movies(movie_id, title)
+      `)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data;
+
+    return data.map(rating => ({
+      rating_id: rating.rating_id,
+      customer: rating.customers,
+      movie: rating.movies,
+      rating_value: rating.rating_value,
+      review: rating.review,
+      created_at: rating.created_at,
+    }));
   }
 
   // READ ONE
-  async findOne(id: string) {
+  async findOne(id: string): Promise<RatingsResponseDto> {
     const { data, error } = await this.supabase
       .from('ratings')
-      .select('*')
+      .select(`
+        *,
+        customers(customer_id, full_name, email),
+        movies(movie_id, title)
+      `)
       .eq('rating_id', id)
       .single();
 
     if (error) throw error;
-    return data;
+    if (!data) throw new NotFoundException(`Rating ${id} not found`);
+
+    return {
+      rating_id: data.rating_id,
+      customer: data.customers,
+      movie: data.movies,
+      rating_value: data.rating_value,
+      review: data.review,
+      created_at: data.created_at,
+    };
   }
 
   // UPDATE
