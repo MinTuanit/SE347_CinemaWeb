@@ -24,5 +24,5 @@ export class Customers {
   cccd: string;
 
   @Column()
-  dob: string;
+  dob: Date;
 }

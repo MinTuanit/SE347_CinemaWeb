@@ -12,4 +12,7 @@ export class CinemasResponseDto {
 
   @ApiProperty()
   created_at: string;
+
+  @ApiProperty()
+  room_count: number;
 }

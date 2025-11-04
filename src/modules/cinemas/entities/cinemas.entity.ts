@@ -12,5 +12,5 @@ export class Cinemas {
   address: string;
 
   @Column()
-  created_at: string;
+  created_at: Date;
 }

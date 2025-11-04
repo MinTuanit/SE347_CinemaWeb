@@ -21,7 +21,4 @@ export class CustomersResponseDto {
 
   @ApiProperty()
   cccd: string;
-
-  @ApiProperty()
-  dob: string;
 }

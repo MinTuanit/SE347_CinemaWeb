@@ -1,20 +1,24 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, MaxLength } from 'class-validator';
 
 export class CreateCinemasDto {
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Name of the cinema',
+    example: 'CGV Landmark 81',
+    maxLength: 255,
+  })
   @IsString()
-  cinema_id: string;
-
-  @ApiProperty()
-  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
   name: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Address of the cinema',
+    example: '208 Nguyễn Hữu Cảnh, Bình Thạnh, TP.HCM',
+    maxLength: 500,
+  })
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
   address: string;
-
-  @ApiProperty()
-  @IsString()
-  created_at: string;
 }

@@ -4,18 +4,17 @@ import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 export class CreateCustomersDto {
   @ApiProperty()
   @IsString()
-  customer_id: string;
-
-  @ApiProperty()
-  @IsString()
+  @IsNotEmpty()
   full_name: string;
 
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
   email: string;
 
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
   password_hash: string;
 
   @ApiProperty()
@@ -32,5 +31,6 @@ export class CreateCustomersDto {
 
   @ApiProperty()
   @IsString()
-  dob: string;
+  @IsNotEmpty()
+  dob: Date;
 }

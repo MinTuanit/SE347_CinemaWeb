@@ -1,26 +1,75 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { CreateMoviesDto } from './dto/create-movies.dto';
 import { UpdateMoviesDto } from './dto/update-movies.dto';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class MoviesService {
-  create(dto: CreateMoviesDto) {
-    return 'Create movies';
+  constructor(
+    @Inject('SUPABASE_CLIENT')
+    private readonly supabase: SupabaseClient,
+  ) {}
+
+  async findAll() {
+    const { data, error } = await this.supabase.from('movies').select('*');
+
+    if (error) throw error;
+    return data;
   }
 
-  findAll() {
-    return 'Find all movies';
+  async findOne(id: string) {
+    const { data, error } = await this.supabase
+      .from('movies')
+      .select('*')
+      .eq('movie_id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
-  findOne(id: string) {
-    return 'Find one movies';
+  async create(dto: CreateMoviesDto) {
+    const newMovie = {
+      movie_id: uuidv4(),
+      title: dto.title,
+      genre: dto.genre,
+      duration_min: dto.duration_min,
+      release_date: dto.release_date,
+      description: dto.description,
+      poster_url: dto.poster_url,
+      created_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await this.supabase
+      .from('movies')
+      .insert(newMovie)
+      .select();
+
+    if (error) throw new Error(error.message);
+    return data;
   }
 
-  update(id: string, dto: UpdateMoviesDto) {
-    return 'Update movies';
+  async update(id: string, dto: UpdateMoviesDto) {
+    const updateData: any = { ...dto };
+
+    const { data, error } = await this.supabase
+      .from('movies')
+      .update(updateData)
+      .eq('movie_id', id)
+      .select();
+
+    if (error) throw error;
+    return data;
   }
 
-  remove(id: string) {
-    return 'Remove movies';
+  async remove(id: string) {
+    const { error } = await this.supabase
+      .from('movies')
+      .delete()
+      .eq('movie_id', id);
+
+    if (error) throw error;
+    return { message: 'Movie deleted successfully' };
   }
 }

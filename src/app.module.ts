@@ -46,4 +46,4 @@ import { TicketsModule } from './modules/tickets/tickets.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
