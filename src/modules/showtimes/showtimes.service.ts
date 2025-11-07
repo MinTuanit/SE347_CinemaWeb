@@ -37,28 +37,63 @@ export class ShowtimesService {
   //   if (error) throw error;
   //   return data;
   // }
-
   async findAll() {
-    const { data, error } = await this.supabase
+    const { data: showtimes, error: showtimeError } = await this.supabase
       .from('showtimes')
-      .select('*, cinemas(cinema_id, name), rooms(room_id, name), movies(movie_id, title)')
+      .select('*, rooms(room_id, name, cinema_id), movies(movie_id, title)')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data;
+    if (showtimeError) throw showtimeError;
+
+    const cinemaIds = [...new Set(showtimes.map(s => s.rooms?.cinema_id).filter(Boolean))];
+
+    const { data: cinemas, error: cinemaError } = await this.supabase
+      .from('cinemas')
+      .select('cinema_id, name')
+      .in('cinema_id', cinemaIds);
+
+    if (cinemaError) throw cinemaError;
+
+    const result = showtimes.map(s => ({
+      ...s,
+      cinema: cinemas.find(c => c.cinema_id === s.rooms?.cinema_id) || null,
+    }));
+
+    return result;
   }
+
 
   // Get a showtime by ID
   async findOne(id: string) {
-    const { data, error } = await this.supabase
+    const { data: showtimeData, error: showtimeError } = await this.supabase
       .from('showtimes')
-      .select('*, cinemas(cinema_id, name), rooms(room_id, name), movies(movie_id, title)')
-      .eq('showtime_id', id);
+      .select('*, rooms(room_id, name, cinema_id), movies(movie_id, title)')
+      .eq('showtime_id', id)
+      .single();
 
-    if (error) throw error;
-    if (!data || data.length === 0) throw new NotFoundException(`Showtime ${id} not found`);
-    return data;
+    if (showtimeError) throw showtimeError;
+    if (!showtimeData) throw new NotFoundException(`Showtime ${id} not found`);
+
+    const cinemaId = showtimeData.rooms?.cinema_id;
+
+    let cinema: { cinema_id: string; name: string } | null = null;
+    if (cinemaId) {
+      const { data: cinemaData, error: cinemaError } = await this.supabase
+        .from('cinemas')
+        .select('cinema_id, name')
+        .eq('cinema_id', cinemaId)
+        .single();
+
+      if (cinemaError) throw cinemaError;
+      cinema = cinemaData;
+    }
+
+    return {
+      ...showtimeData,
+      cinema,
+    };
   }
+
 
   // Update showtime
   async update(id: string, dto: UpdateShowtimesDto) {
