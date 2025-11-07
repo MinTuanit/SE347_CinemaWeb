@@ -3,7 +3,6 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { ItemsModule } from './items/items.module';
 import { AdminsModule } from './modules/admins/admins.module';
 import { CinemasModule } from './modules/cinemas/cinemas.module';
 import { CustomersModule } from './modules/customers/customers.module';
@@ -28,7 +27,6 @@ import { TicketsModule } from './modules/tickets/tickets.module';
 
     // Feature modules
     AuthModule,
-    ItemsModule,
     AdminsModule,
     CinemasModule,
     CustomersModule,

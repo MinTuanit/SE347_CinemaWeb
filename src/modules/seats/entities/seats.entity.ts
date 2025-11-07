@@ -1,19 +1,19 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity('seats')
 export class Seats {
   @PrimaryGeneratedColumn('uuid')
   seat_id: string;
 
-  @PrimaryGeneratedColumn('uuid')
+  @Column({ type: 'uuid' })
   room_id: string;
 
-  @Column()
-  row: string;
+  @Column({ type: 'int' })
+  row: number;
 
-  @Column()
-  col: string;
+  @Column({ type: 'int' })
+  col: number;
 
-  @Column()
+  @Column({ type: 'varchar', length: 10 })
   seat_label: string;
 }

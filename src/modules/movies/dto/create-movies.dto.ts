@@ -1,48 +1,56 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, IsNumber, IsDateString, IsJSON } from 'class-validator';
 
 export class CreateMoviesDto {
-  @ApiProperty()
+  @ApiProperty({ example: 'Inception' })
   @IsString()
-  movie_id: string;
-
-  @ApiProperty()
-  @IsString()
+  @IsNotEmpty()
   title: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'A mind-bending thriller by Christopher Nolan', required: false })
+  @IsOptional()
   @IsString()
-  description: string;
+  description?: string;
 
-  @ApiProperty()
-  @IsString()
-  duration_min: string;
+  @ApiProperty({ example: 148 })
+  @IsNumber()
+  @IsNotEmpty()
+  duration_min: number;
 
-  @ApiProperty()
-  @IsString()
+  @ApiProperty({ example: '2010-07-16' })
+  @IsDateString()
+  @IsNotEmpty()
   release_date: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'PG-13', required: false })
+  @IsOptional()
   @IsString()
-  rating: string;
+  rating?: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'https://example.com/inception.jpg' })
   @IsString()
+  @IsNotEmpty()
   poster_url: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'Christopher Nolan', required: false })
+  @IsOptional()
   @IsString()
-  director: string;
+  director?: string;
 
-  @ApiProperty()
-  @IsString()
-  actors: string;
+  @ApiProperty({
+    example: [
+      { name: 'Leonardo DiCaprio', role: 'Cobb' },
+      { name: 'Joseph Gordon-Levitt', role: 'Arthur' },
+    ],
+    required: false,
+  })
+  @IsOptional()
+  actors?: any; // JSON
 
-  @ApiProperty()
-  @IsString()
-  created_at: string;
-
-  @ApiProperty()
-  @IsString()
-  genre: string;
+  @ApiProperty({
+    example: ['Action', 'Sci-Fi', 'Thriller'],
+    required: false,
+  })
+  @IsOptional()
+  genre?: any; // JSON
 }

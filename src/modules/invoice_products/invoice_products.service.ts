@@ -24,8 +24,7 @@ export class Invoice_productsService {
   async findAll() {
     const { data, error } = await this.supabase
       .from('invoice_products')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*');
 
     if (error) throw error;
     return data;
@@ -35,31 +34,21 @@ export class Invoice_productsService {
     const { data, error } = await this.supabase
       .from('invoice_products')
       .select('*')
-      .eq('invoice_product_id', id);
+      .eq('invoice_id', id);
 
     if (error) throw error;
     if (!data || data.length === 0) throw new NotFoundException(`Invoice product ${id} not found`);
-    return data[0];
-  }
-
-  async update(id: string, dto: UpdateInvoice_productsDto) {
-    const { data, error } = await this.supabase
-      .from('invoice_products')
-      .update(dto)
-      .eq('invoice_product_id', id)
-      .select();
-
-    if (error) throw error;
     return data;
   }
 
-  async remove(id: string) {
+  async remove(invoice_id: string, product_id: string) {
     const { error } = await this.supabase
       .from('invoice_products')
       .delete()
-      .eq('invoice_product_id', id);
+      .eq('invoice_id', invoice_id)
+      .eq('product_id', product_id);
 
     if (error) throw error;
-    return { message: `Invoice product with id ${id} deleted successfully` };
+    return { message: `Invoice product deleted successfully` };
   }
 }
