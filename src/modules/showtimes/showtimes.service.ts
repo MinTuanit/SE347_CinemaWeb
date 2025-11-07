@@ -26,17 +26,7 @@ export class ShowtimesService {
     if (error) throw error;
     return data;
   }
-
   // Get all showtimes
-  // async findAll() {
-  //   const { data, error } = await this.supabase
-  //     .from('showtimes')
-  //     .select('*')
-  //     .order('created_at', { ascending: false });
-
-  //   if (error) throw error;
-  //   return data;
-  // }
   async findAll() {
     const { data: showtimes, error: showtimeError } = await this.supabase
       .from('showtimes')
@@ -94,7 +84,6 @@ export class ShowtimesService {
     };
   }
 
-
   // Update showtime
   async update(id: string, dto: UpdateShowtimesDto) {
     const { data, error } = await this.supabase
@@ -116,5 +105,43 @@ export class ShowtimesService {
 
     if (error) throw error;
     return { message: `Showtime with id ${id} deleted successfully` };
+  }
+
+  // Get showtimes by movie_id within 7 days
+  async findByMovieId(movieId: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sevenDaysFromNow = new Date(today);
+    sevenDaysFromNow.setDate(today.getDate() + 8);
+
+    const { data: showtimes, error: showtimeError } = await this.supabase
+      .from('showtimes')
+      .select('*, rooms(room_id, name, cinema_id), movies(movie_id, title)')
+      .eq('movie_id', movieId)
+      .gte('start_time', today.toISOString())
+      .lte('start_time', sevenDaysFromNow.toISOString())
+      .order('start_time', { ascending: true });
+
+    if (showtimeError) throw showtimeError;
+
+    if (!showtimes || showtimes.length === 0) {
+      return [];
+    }
+
+    const cinemaIds = [...new Set(showtimes.map(s => s.rooms?.cinema_id).filter(Boolean))];
+
+    const { data: cinemas, error: cinemaError } = await this.supabase
+      .from('cinemas')
+      .select('cinema_id, name')
+      .in('cinema_id', cinemaIds);
+
+    if (cinemaError) throw cinemaError;
+
+    const result = showtimes.map(s => ({
+      ...s,
+      cinema: cinemas.find(c => c.cinema_id === s.rooms?.cinema_id) || null,
+    }));
+
+    return result;
   }
 }

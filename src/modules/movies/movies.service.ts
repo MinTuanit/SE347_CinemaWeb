@@ -9,13 +9,95 @@ export class MoviesService {
   constructor(
     @Inject('SUPABASE_CLIENT')
     private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
+
+  private async getMovieStatus(movie_id: string, release_date: string): Promise<string> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysFromNow = new Date(today);
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+    const releaseDate = new Date(release_date);
+
+    let status = 'unknown';
+
+    if (releaseDate > today) {
+      // Coming soon: release date is in the future
+      status = 'coming soon';
+    } else {
+      // Check if there are any showtimes for this movie in the next 30 days
+      const { data: showtimes, error: showtimesError } = await this.supabase
+        .from('showtimes')
+        .select('showtime_id, start_time')
+        .eq('movie_id', movie_id)
+        .gte('start_time', today.toISOString())
+        .lte('start_time', thirtyDaysFromNow.toISOString());
+
+      if (showtimesError) {
+        console.error('Error fetching showtimes:', showtimesError);
+        status = 'unknown';
+      } else if (showtimes && showtimes.length > 0) {
+        // Has showtimes in next 30 days
+        status = 'now showing';
+      } else {
+        // No showtimes in next 30 days
+        status = 'stopped';
+      }
+    }
+
+    return status;
+  }
 
   async findAll() {
     const { data, error } = await this.supabase.from('movies').select('*');
 
     if (error) throw error;
     return data;
+  }
+
+  async findAllByCustomerId(user_id: string) {
+    const { data, error } = await this.supabase
+      .from('saves')
+      .select(`
+        movies(
+          movie_id,
+          title,
+          description,
+          duration_min,
+          release_date,
+          rating,
+          poster_url,
+          director,
+          actors,
+          genre,
+          created_at
+        )
+      `)
+      .eq('customer_id', user_id);
+
+    if (error) throw error;
+
+    // Transform data to include isSaved flag and calculate status
+    const results = await Promise.all(data.map(async (save) => {
+      const movie = save.movies;
+
+      // Handle case where movies might be an array or single object
+      const movieData = Array.isArray(movie) ? movie[0] : movie;
+
+      if (!movieData || !movieData.movie_id) {
+        return null;
+      }
+
+      const status = await this.getMovieStatus(movieData.movie_id, movieData.release_date);
+
+      return {
+        ...movieData,
+        status,
+        isSaved: true,
+      };
+    }));
+
+    return results.filter(movie => movie !== null);
   }
 
   async findOne(id: string) {

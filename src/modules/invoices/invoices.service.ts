@@ -3,6 +3,8 @@ import { CreateInvoicesDto } from './dto/create-invoices.dto';
 import { UpdateInvoicesDto } from './dto/update-invoices.dto';
 import { InvoicesResponseDto } from './dto/invoices-response.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { BookingHistoryDto } from './dto/booking-history.dto';
+import { UserProfileDto } from './dto/user-profile.dto';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -224,5 +226,115 @@ export class InvoicesService {
 
     if (error) throw error;
     return { message: `Invoice with id ${id} deleted successfully` };
+  }
+
+  async getUserProfile(customerId: string): Promise<UserProfileDto> {
+    // Get customer info
+    const { data: customer, error: customerError } = await this.supabase
+      .from('customers')
+      .select('*')
+      .eq('customer_id', customerId)
+      .single();
+
+    if (customerError || !customer) {
+      throw new NotFoundException(`Customer ${customerId} not found`);
+    }
+
+    // Get booking history from invoices
+    const { data: invoices, error: invoicesError } = await this.supabase
+      .from('invoices')
+      .select(`
+        invoice_id,
+        created_at,
+        status,
+        total_amount,
+        tickets(
+          ticket_id,
+          price,
+          showtimes(
+            start_time,
+            movies(title),
+            rooms(
+              name,
+              cinemas(name)
+            )
+          ),
+          seats(seat_label)
+        )
+      `)
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false });
+
+    if (invoicesError) {
+      throw new Error(`Failed to fetch booking history: ${invoicesError.message}`);
+    }
+
+    // Transform invoices to booking history
+    const bookingHistory: BookingHistoryDto[] = (invoices || [])
+      .filter(invoice => invoice.tickets && invoice.tickets.length > 0)
+      .map(invoice => {
+        const firstTicket = invoice.tickets[0];
+
+        // Handle nested data structures
+        const showtime = Array.isArray(firstTicket?.showtimes) ? firstTicket.showtimes[0] : firstTicket?.showtimes;
+        const movie = Array.isArray(showtime?.movies) ? showtime.movies[0] : showtime?.movies;
+        const room = Array.isArray(showtime?.rooms) ? showtime.rooms[0] : showtime?.rooms;
+        const cinema = Array.isArray(room?.cinemas) ? room.cinemas[0] : room?.cinemas;
+
+        const allSeats = invoice.tickets
+          .map(t => {
+            const seat = Array.isArray(t.seats) ? t.seats[0] : t.seats;
+            return seat?.seat_label;
+          })
+          .filter(Boolean);
+
+        return {
+          booking_id: invoice.invoice_id,
+          movie_title: movie?.title || 'Unknown Movie',
+          cinema_name: cinema?.name || 'Unknown Cinema',
+          showtime: showtime?.start_time || '',
+          seats: allSeats,
+          total_price: invoice.total_amount || 0,
+          status: this.mapInvoiceStatus(invoice.status),
+          booking_time: invoice.created_at,
+        };
+      });
+
+    return {
+      customer_id: customer.customer_id,
+      full_name: customer.full_name,
+      email: customer.email,
+      phone: customer.phone,
+      date_of_birth: customer.date_of_birth,
+      member_since: customer.created_at,
+      total_bookings: bookingHistory.length,
+      booking_history: bookingHistory,
+    };
+  }
+
+  /**
+   * Get booking history only
+   */
+  async getBookingHistory(customerId: string): Promise<BookingHistoryDto[]> {
+    const profile = await this.getUserProfile(customerId);
+    return profile.booking_history;
+  }
+
+  /**
+   * Map invoice status to booking status
+   */
+  private mapInvoiceStatus(
+    invoiceStatus: string,
+  ): 'Pending' | 'Confirmed' | 'Cancelled' | 'Completed' {
+    const statusMap: Record<string, 'Pending' | 'Confirmed' | 'Cancelled' | 'Completed'> = {
+      pending: 'Pending',
+      paid: 'Confirmed',
+      confirmed: 'Confirmed',
+      cancelled: 'Cancelled',
+      completed: 'Completed',
+      refunded: 'Cancelled',
+    };
+
+    return statusMap[invoiceStatus?.toLowerCase()] || 'Pending';
   }
 }
