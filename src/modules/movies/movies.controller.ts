@@ -5,7 +5,7 @@ import { UpdateMoviesDto } from './dto/update-movies.dto';
 
 @Controller('movies')
 export class MoviesController {
-  constructor(private readonly service: MoviesService) {}
+  constructor(private readonly service: MoviesService) { }
 
   @Post()
   create(@Body() dto: CreateMoviesDto) {
@@ -20,6 +20,11 @@ export class MoviesController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
+  }
+
+  @Get('/customer/:customer_id')
+  findAllByCustomerId(@Param('customer_id') customer_id: string) {
+    return this.service.findAllByCustomerId(customer_id);
   }
 
   @Patch(':id')

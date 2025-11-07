@@ -5,7 +5,7 @@ import { UpdateSeatsDto } from './dto/update-seats.dto';
 
 @Controller('seats')
 export class SeatsController {
-  constructor(private readonly service: SeatsService) {}
+  constructor(private readonly service: SeatsService) { }
 
   @Post()
   create(@Body() dto: CreateSeatsDto) {
@@ -20,6 +20,11 @@ export class SeatsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
+  }
+
+  @Get('room/:room_id')
+  findByRoomId(@Param('room_id') roomId: string) {
+    return this.service.findByRoomId(roomId);
   }
 
   @Patch(':id')

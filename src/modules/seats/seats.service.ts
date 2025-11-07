@@ -14,7 +14,7 @@ export class SeatsService {
   constructor(
     @Inject('SUPABASE_CLIENT')
     private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
   /**
    * Create a new seat
@@ -68,6 +68,56 @@ export class SeatsService {
     );
 
     return seatsWithRoom;
+  }
+
+  /**
+   * Get seats by room_id with availability status
+   */
+  async findByRoomId(roomId: string, showtimeId?: string): Promise<Array<{
+    seat_id: string;
+    row: number;
+    column: number;
+    seat_label: string;
+    available: boolean;
+  }>> {
+    const { data: seats, error } = await this.supabase
+      .from('seats')
+      .select('seat_id, row, col, seat_label')
+      .eq('room_id', roomId)
+      .order('row', { ascending: true })
+      .order('col', { ascending: true });
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to fetch seats for room: ${error.message}`,
+      );
+    }
+
+    if (!seats || seats.length === 0) {
+      return [];
+    }
+
+    // If showtimeId is provided, check which seats are already booked
+    let bookedSeatIds: string[] = [];
+    if (showtimeId) {
+      const { data: tickets, error: ticketError } = await this.supabase
+        .from('tickets')
+        .select('seat_id')
+        .eq('showtime_id', showtimeId);
+
+      if (!ticketError && tickets) {
+        bookedSeatIds = tickets.map(t => t.seat_id);
+      }
+    }
+
+    // Map seats with availability
+    return seats.map(seat => ({
+      seat_id: seat.seat_id,
+      row: seat.row,
+      column: seat.col,
+      seat_label: seat.seat_label,
+      available: !bookedSeatIds.includes(seat.seat_id),
+    }));
   }
 
   /**
@@ -135,12 +185,25 @@ export class SeatsService {
     return { message: `Seat with ID ${id} has been deleted successfully` };
   }
 
+  async removeSeatsByRoomId(roomId: string): Promise<{ message: string }> {
+    const { error } = await this.supabase
+      .from('seats')
+      .delete()
+      .eq('room_id', roomId);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to delete seats: ${error.message}`,
+      );
+    }
+
+    return { message: `Seats in room with ID ${roomId} have been deleted successfully` };
+  }
+
   /**
    * Helper method: Get room info (id + name)
    */
-  private async getRoomInfo(
-    roomId: string,
-  ): Promise<{ room_id: string; name: string }> {
+  async getRoomInfo(roomId: string): Promise<{ room_id: string; name: string }> {
     const { data, error } = await this.supabase
       .from('rooms')
       .select('room_id, name')

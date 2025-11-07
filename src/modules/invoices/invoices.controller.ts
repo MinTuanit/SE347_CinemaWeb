@@ -5,7 +5,7 @@ import { UpdateInvoicesDto } from './dto/update-invoices.dto';
 
 @Controller('invoices')
 export class InvoicesController {
-  constructor(private readonly service: InvoicesService) {}
+  constructor(private readonly service: InvoicesService) { }
 
   @Post()
   create(@Body() dto: CreateInvoicesDto) {
@@ -15,6 +15,11 @@ export class InvoicesController {
   @Get()
   findAll() {
     return this.service.findAll();
+  }
+
+  @Get('customer/:customer_id')
+  GetUserProfile(@Param('customer_id') customerId: string) {
+    return this.service.getUserProfile(customerId);
   }
 
   @Get(':id')
