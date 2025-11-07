@@ -19,14 +19,14 @@ export class CreateInvoicesDto {
 
   @ApiProperty({
     description: 'The payment method used for the invoice',
-    example: 'credit_card',
+    example: 'card',
   })
   @IsString()
   payment_method: string;
 
   @ApiProperty({
     description: 'The status of the invoice',
-    example: 'paid',
+    example: 'pending',
   })
   @IsString()
   status: string;

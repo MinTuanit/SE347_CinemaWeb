@@ -12,10 +12,19 @@ export class InvoicesService {
     private readonly supabase: SupabaseClient,
   ) { }
 
+  private generateInvoiceCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
   async create(dto: CreateInvoicesDto) {
     const newInvoice = {
       invoice_id: dto.invoice_id || uuidv4(),
-      invoice_code: dto.invoice_code,
+      invoice_code: dto.invoice_code || this.generateInvoiceCode(),
       customer_id: dto.customer_id,
       payment_method: dto.payment_method,
       status: dto.status,
@@ -36,79 +45,161 @@ export class InvoicesService {
     const { data, error } = await this.supabase
       .from('invoices')
       .select(`
-        *,
-        customers(customer_id, full_name, email),
-        tickets(showtime_id, price, seats(seat_number)),
-        invoice_products(quantity, price, products(product_id, name))
-      `)
+      *,
+      customers(customer_id, full_name, email),
+      tickets(
+        ticket_id,
+        price,
+        showtimes(
+          start_time,
+          movies(title)
+        ),
+        seats(seat_id, seat_label)
+      ),
+      invoice_products(
+        quantity,
+        products(product_id, name, price)
+      )
+    `)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    // Transform data to match InvoicesResponseDto
-    return data.map(invoice => ({
-      invoice_id: invoice.invoice_id,
-      invoice_code: invoice.invoice_code,
-      customer: invoice.customers,
-      ticket_count: invoice.tickets?.length || 0,
-      product_count: invoice.invoice_products?.length || 0,
-      tickets: {
-        title: 'Movie Title', // Placeholder, need to join with movies via showtimes
-        showtime: '2023-10-01T12:00:00Z', // Placeholder
-        price: invoice.tickets?.[0]?.price || 0,
-        seats: invoice.tickets?.flatMap(t => t.seats?.map(s => s.seat_number) || []) || [],
-      },
-      products: invoice.invoice_products?.map(ip => ({
-        product_id: ip.products.product_id,
-        name: ip.products.name,
-        quantity: ip.quantity,
-        price: ip.price,
-        total: ip.quantity * ip.price,
-      })) || [],
-      payment_method: invoice.payment_method,
-      total_amount: parseFloat(invoice.total_amount),
-      status: invoice.status,
-      created_at: invoice.created_at,
-    }));
+    return data.map(invoice => {
+      const ticketsData =
+        invoice?.tickets?.map(ticket => ({
+          title: ticket.showtimes?.movies?.title || 'Unknown Movie',
+          showtime: ticket.showtimes?.start_time || null,
+          price: ticket.price || 0,
+          seat: ticket.seats
+            ? Array.isArray(ticket.seats)
+              ? ticket.seats.map(s => s.seat_label)
+              : [ticket.seats.seat_label]
+            : [],
+        })) || [];
+
+      // Get first ticket's info and collect all seats
+      const firstTicket = ticketsData[0];
+      const allSeats = ticketsData.flatMap(t => t.seat);
+
+      const tickets = firstTicket ? {
+        title: firstTicket.title,
+        showtime: firstTicket.showtime,
+        price: firstTicket.price,
+        seats: allSeats,
+      } : {
+        title: 'Unknown Movie',
+        showtime: null,
+        price: 0,
+        seats: [],
+      };
+
+      const products =
+        invoice?.invoice_products?.map(ip => ({
+          product_id: ip.products?.product_id,
+          name: ip.products?.name,
+          quantity: ip.quantity,
+          price: ip.products?.price || 0,
+          total: ip.quantity * (ip.products?.price || 0),
+        })) || [];
+
+      const totalTickets = ticketsData.reduce((sum, t) => sum + (t.price || 0), 0);
+      const totalProducts = products.reduce((sum, p) => sum + (p.total || 0), 0);
+      const totalAmount = totalTickets + totalProducts;
+
+      return {
+        invoice_id: invoice.invoice_id,
+        invoice_code: invoice.invoice_code,
+        customer: invoice.customers,
+        ticket_count: ticketsData.length,
+        product_count: products.length,
+        tickets,
+        products,
+        payment_method: invoice.payment_method,
+        total_amount: totalAmount,
+        status: invoice.status,
+        created_at: invoice.created_at,
+      };
+    });
   }
 
   async findOne(id: string): Promise<InvoicesResponseDto> {
     const { data, error } = await this.supabase
       .from('invoices')
       .select(`
-        *,
-        customers(customer_id, full_name, email),
-        tickets(showtime_id, price, seats(seat_number)),
-        invoice_products(quantity, price, products(product_id, name))
-      `)
+      *,
+      customers(customer_id, full_name, email),
+      tickets(
+        ticket_id,
+        price,
+        showtimes(
+          start_time,
+          movies(title)
+        ),
+        seats(seat_id, seat_label)
+      ),
+      invoice_products(
+        quantity,
+        products(product_id, name, price)
+      )
+    `)
       .eq('invoice_id', id)
       .single();
 
     if (error) throw error;
     if (!data) throw new NotFoundException(`Invoice ${id} not found`);
 
-    // Transform data to match InvoicesResponseDto
+    const ticketsData =
+      data?.tickets?.map(ticket => ({
+        title: ticket.showtimes?.movies?.title || 'Unknown Movie',
+        showtime: ticket.showtimes?.start_time || null,
+        price: ticket.price || 0,
+        seat: ticket.seats
+          ? Array.isArray(ticket.seats)
+            ? ticket.seats.map(s => s.seat_label)
+            : [ticket.seats.seat_label]
+          : [],
+      })) || [];
+
+    // Get first ticket's info and collect all seats
+    const firstTicket = ticketsData[0];
+    const allSeats = ticketsData.flatMap(t => t.seat);
+
+    const tickets = firstTicket ? {
+      title: firstTicket.title,
+      showtime: firstTicket.showtime,
+      price: firstTicket.price,
+      seats: allSeats,
+    } : {
+      title: 'Unknown Movie',
+      showtime: null,
+      price: 0,
+      seats: [],
+    };
+
+    const products =
+      data?.invoice_products?.map(ip => ({
+        product_id: ip.products?.product_id,
+        name: ip.products?.name,
+        quantity: ip.quantity,
+        price: ip.products?.price || 0,
+        total: ip.quantity * (ip.products?.price || 0),
+      })) || [];
+
+    const totalTickets = ticketsData.reduce((sum, t) => sum + (t.price || 0), 0);
+    const totalProducts = products.reduce((sum, p) => sum + (p.total || 0), 0);
+    const totalAmount = totalTickets + totalProducts;
+
     return {
       invoice_id: data.invoice_id,
       invoice_code: data.invoice_code,
       customer: data.customers,
-      ticket_count: data.tickets?.length || 0,
-      product_count: data.invoice_products?.length || 0,
-      tickets: {
-        title: 'Movie Title', // Placeholder
-        showtime: '2023-10-01T12:00:00Z', // Placeholder
-        price: data.tickets?.[0]?.price || 0,
-        seats: data.tickets?.flatMap(t => t.seats?.map(s => s.seat_number) || []) || [],
-      },
-      products: data.invoice_products?.map(ip => ({
-        product_id: ip.products.product_id,
-        name: ip.products.name,
-        quantity: ip.quantity,
-        price: ip.price,
-        total: ip.quantity * ip.price,
-      })) || [],
+      ticket_count: ticketsData.length,
+      product_count: products.length,
+      tickets,
+      products,
       payment_method: data.payment_method,
-      total_amount: parseFloat(data.total_amount),
+      total_amount: totalAmount,
       status: data.status,
       created_at: data.created_at,
     };
