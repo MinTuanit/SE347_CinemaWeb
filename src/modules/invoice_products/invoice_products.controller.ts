@@ -8,25 +8,25 @@ import { isValidDate } from 'rxjs/internal/util/isDate';
 export class Invoice_productsController {
   constructor(private readonly service: Invoice_productsService) { }
 
-  @Post()
-  create(@Body() dto: CreateInvoice_productsDto) {
-    return this.service.create(dto);
-  }
+  // @Post()
+  // create(@Body() dto: CreateInvoice_productsDto) {
+  //   return this.service.create(dto);
+  // }
 
-  @Get()
-  findAll() {
-    return this.service.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.service.findAll();
+  // }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
-  }
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.service.findOne(id);
+  // }
 
-  @Delete(':invoice_id/:product_id')
-  remove(
-    @Param('invoice_id') invoice_id: string,
-    @Param('product_id') product_id: string) {
-    return this.service.remove(invoice_id, product_id);
-  }
+  // @Delete(':invoice_id/:product_id')
+  // remove(
+  //   @Param('invoice_id') invoice_id: string,
+  //   @Param('product_id') product_id: string) {
+  //   return this.service.remove(invoice_id, product_id);
+  // }
 }

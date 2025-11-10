@@ -5,30 +5,30 @@ import { UpdateTicketsDto } from './dto/update-tickets.dto';
 
 @Controller('tickets')
 export class TicketsController {
-  constructor(private readonly service: TicketsService) {}
+  constructor(private readonly service: TicketsService) { }
 
-  @Post()
-  create(@Body() dto: CreateTicketsDto) {
-    return this.service.create(dto);
-  }
+  // @Post()
+  // create(@Body() dto: CreateTicketsDto) {
+  //   return this.service.create(dto);
+  // }
 
-  @Get()
-  findAll() {
-    return this.service.findAll();
-  }
+  // @Get()
+  // findAll() {
+  //   return this.service.findAll();
+  // }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
-  }
+  // @Get(':id')
+  // findOne(@Param('id') id: string) {
+  //   return this.service.findOne(id);
+  // }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateTicketsDto) {
-    return this.service.update(id, dto);
-  }
+  // @Patch(':id')
+  // update(@Param('id') id: string, @Body() dto: UpdateTicketsDto) {
+  //   return this.service.update(id, dto);
+  // }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
-  }
+  // @Delete(':id')
+  // remove(@Param('id') id: string) {
+  //   return this.service.remove(id);
+  // }
 }
