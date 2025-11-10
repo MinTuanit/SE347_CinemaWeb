@@ -34,7 +34,6 @@ export class MoviesService {
         .lte('start_time', thirtyDaysFromNow.toISOString());
 
       if (showtimesError) {
-        console.error('Error fetching showtimes:', showtimesError);
         status = 'unknown';
       } else if (showtimes && showtimes.length > 0) {
         // Has showtimes in next 30 days

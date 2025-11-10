@@ -1,5 +1,5 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { CreateInvoicesDto } from './dto/create-invoices.dto';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateInvoicesDto } from './dto/update-invoices.dto';
 import { InvoicesResponseDto } from './dto/invoices-response.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -23,24 +23,98 @@ export class InvoicesService {
     return code;
   }
 
-  async create(dto: CreateInvoicesDto) {
-    const newInvoice = {
-      invoice_id: dto.invoice_id || uuidv4(),
-      invoice_code: dto.invoice_code || this.generateInvoiceCode(),
-      customer_id: dto.customer_id,
-      payment_method: dto.payment_method,
-      status: dto.status,
-      total_amount: dto.total_amount,
-      created_at: dto.created_at || new Date().toISOString(),
-    };
+  async createBooking(dto: CreateBookingDto): Promise<InvoicesResponseDto> {
+    const invoiceId = uuidv4();
+    const invoiceCode = this.generateInvoiceCode();
 
-    const { data, error } = await this.supabase
-      .from('invoices')
-      .insert(newInvoice)
-      .select();
+    try {
+      // 1. Get showtime and seat prices
+      const { data: showtime, error: showtimeError } = await this.supabase
+        .from('showtimes')
+        .select('*, movies(title)')
+        .eq('showtime_id', dto.tickets.showtime_id)
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (showtimeError || !showtime) {
+        throw new BadRequestException('Showtime not found');
+      }
+
+      // 2. Verify seats are available
+      const { data: existingTickets, error: ticketCheckError } = await this.supabase
+        .from('tickets')
+        .select('seat_id')
+        .eq('showtime_id', dto.tickets.showtime_id)
+        .in('seat_id', dto.tickets.seats);
+
+      if (ticketCheckError) throw ticketCheckError;
+
+      if (existingTickets && existingTickets.length > 0) {
+        throw new BadRequestException('Some seats are already booked');
+      }
+
+      // 3. Create invoice
+      const newInvoice = {
+        invoice_id: invoiceId,
+        invoice_code: invoiceCode,
+        customer_id: dto.customer_id,
+        payment_method: dto.payment_method,
+        status: dto.status || "pending",
+        total_amount: dto.total_amount,
+        created_at: new Date().toISOString(),
+      };
+
+      const { data: invoice, error: invoiceError } = await this.supabase
+        .from('invoices')
+        .insert(newInvoice)
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // 4. Create tickets for each seat
+      const ticketsToCreate = dto.tickets.seats.map(seatId => ({
+        ticket_id: uuidv4(),
+        invoice_id: invoiceId,
+        showtime_id: dto.tickets.showtime_id,
+        seat_id: seatId,
+        price: showtime.price || 0,
+        created_at: new Date().toISOString(),
+      }));
+
+      const { error: ticketsError } = await this.supabase
+        .from('tickets')
+        .insert(ticketsToCreate);
+
+      if (ticketsError) throw ticketsError;
+
+      // 5. Create invoice_products
+      if (dto.products && dto.products.length > 0) {
+        const invoiceProductsToCreate = await Promise.all(
+          dto.products.map(async (product) => {
+
+            return {
+              invoice_id: invoiceId,
+              product_id: product.product_id,
+              quantity: product.quantity,
+            };
+          })
+        );
+
+        const { error: productsError } = await this.supabase
+          .from('invoice_products')
+          .insert(invoiceProductsToCreate);
+
+        if (productsError) throw productsError;
+      }
+
+      // 6. Return full invoice response
+      return await this.findOne(invoiceId);
+
+    } catch (error) {
+      // Rollback: delete invoice if created
+      await this.supabase.from('invoices').delete().eq('invoice_id', invoiceId);
+      throw error;
+    }
   }
 
   async findAll(): Promise<InvoicesResponseDto[]> {

@@ -22,9 +22,10 @@ export class SeatsController {
     return this.service.findOne(id);
   }
 
-  @Get('room/:room_id')
-  findByRoomId(@Param('room_id') roomId: string) {
-    return this.service.findByRoomId(roomId);
+  @Get('room/:room_id/showtime/:showtime_id')
+  findByRoomIdAndShowtime(@Param('room_id') roomId: string,
+    @Param('showtime_id') showtimeId: string) {
+    return this.service.findByRoomIdAndShowtime(roomId, showtimeId);
   }
 
   @Patch(':id')

@@ -3,6 +3,7 @@ import { CreateTicketsDto } from './dto/create-tickets.dto';
 import { UpdateTicketsDto } from './dto/update-tickets.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import { error } from 'console';
 
 @Injectable()
 export class TicketsService {
@@ -70,5 +71,15 @@ export class TicketsService {
 
     if (error) throw error;
     return { message: `Ticket with id ${id} deleted successfully` };
+  }
+
+  async removeByInvoiceId(invoice_id: string) {
+    const { error } = await this.supabase
+      .from('tickets')
+      .delete()
+      .eq('invoice_id', invoice_id);
+
+    if (error) throw error;
+    return { message: `Tickets with invoice id ${invoice_id} deleted successfully` };
   }
 }

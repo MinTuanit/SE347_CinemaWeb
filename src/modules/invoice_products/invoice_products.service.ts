@@ -41,12 +41,11 @@ export class Invoice_productsService {
     return data;
   }
 
-  async remove(invoice_id: string, product_id: string) {
+  async remove(invoice_id: string) {
     const { error } = await this.supabase
       .from('invoice_products')
       .delete()
-      .eq('invoice_id', invoice_id)
-      .eq('product_id', product_id);
+      .eq('invoice_id', invoice_id);
 
     if (error) throw error;
     return { message: `Invoice product deleted successfully` };

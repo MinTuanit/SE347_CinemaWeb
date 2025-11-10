@@ -73,7 +73,7 @@ export class SeatsService {
   /**
    * Get seats by room_id with availability status
    */
-  async findByRoomId(roomId: string, showtimeId?: string): Promise<Array<{
+  async findByRoomIdAndShowtime(roomId: string, showtimeId?: string): Promise<Array<{
     seat_id: string;
     row: number;
     column: number;

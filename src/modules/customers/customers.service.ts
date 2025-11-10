@@ -15,11 +15,8 @@ export class CustomersService {
   constructor(
     @Inject('SUPABASE_CLIENT')
     private readonly supabase: SupabaseClient,
-  ) {}
+  ) { }
 
-  /**
-   * Create a new customer
-   */
   async create(dto: CreateCustomersDto): Promise<CustomersResponseDto> {
     const newCustomer = {
       customer_id: uuidv4(),
@@ -47,9 +44,6 @@ export class CustomersService {
     return data;
   }
 
-  /**
-   * Get all customers with room count
-   */
   async findAll(): Promise<CustomersResponseDto[]> {
     const { data, error } = await this.supabase
       .from('customers')
@@ -65,9 +59,6 @@ export class CustomersService {
     return data;
   }
 
-  /**
-   * Get a single cinema by ID
-   */
   async findOne(id: string): Promise<CustomersResponseDto> {
     const { data, error } = await this.supabase
       .from('customers')
@@ -82,14 +73,10 @@ export class CustomersService {
     return data;
   }
 
-  /**
-   * Update a cinema by ID
-   */
   async update(
     id: string,
     dto: UpdateCustomersDto,
   ): Promise<CustomersResponseDto> {
-    // First check if cinema exists
     await this.findOne(id);
 
     const updateData: any = { ...dto };
@@ -109,11 +96,7 @@ export class CustomersService {
     return data;
   }
 
-  /**
-   * Delete a cinema by ID
-   */
   async remove(id: string): Promise<{ message: string }> {
-    // First check if cinema exists
     await this.findOne(id);
 
     const { error } = await this.supabase
