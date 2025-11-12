@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { CreateRoomsDto } from './dto/create-rooms.dto';
 import { UpdateRoomsDto } from './dto/update-rooms.dto';
 import { RoomsResponseDto } from './dto/rooms-response.dto';
+import { Seats } from '../seats/entities/seats.entity';
 
 @Injectable()
 export class RoomsService {
@@ -21,6 +22,24 @@ export class RoomsService {
    * Create a new room
    */
   async create(dto: CreateRoomsDto): Promise<RoomsResponseDto> {
+    const capacityroom = dto.seats.length;
+
+    const newRoom = {
+      room_id: uuidv4(),
+      cinema_id: dto.cinema_id,
+      name: dto.name,
+      capacity: capacityroom,
+      created_at: new Date().toISOString(),
+    };
+
+    const newSeats = dto.seats.map((seat) => ({
+      seat_id: uuidv4(),
+      room_id: newRoom.room_id, // liên kết ghế với phòng này
+      row: seat.row,
+      col: seat.column,
+      seat_label: seat.seat_label,
+    }));
+
     // Check if the cinema exists
     const { data: cinemaData, error: cinemaError } = await this.supabase
       .from('cinemas')
@@ -32,32 +51,52 @@ export class RoomsService {
       throw new NotFoundException(`Cinema with ID ${dto.cinema_id} not found`);
     }
 
-    const newRoom = {
-      room_id: uuidv4(),
-      cinema_id: dto.cinema_id,
-      name: dto.name,
-      capacity: dto.capacity,
-      created_at: new Date().toISOString(),
-    };
+    try {
+      // 1️⃣ Tạo room
+      const { data: roomData, error: roomError } = await this.supabase
+        .from('rooms')
+        .insert(newRoom)
+        .select('*')
+        .single();
 
-    const { data, error } = await this.supabase
-      .from('rooms')
-      .insert(newRoom)
-      .select()
-      .single();
+      if (roomError) {
+        throw new InternalServerErrorException(
+          `Lỗi khi tạo room: ${roomError.message}`,
+        );
+      }
 
-    if (error) {
+      // 2️⃣ Tạo seats
+      const { data: seatsData, error: seatsError } = await this.supabase
+        .from('seats')
+        .insert(newSeats)
+        .select('*');
+
+      if (seatsError) {
+        // Nếu lỗi khi tạo seats → rollback (xóa room vừa tạo)
+        await this.supabase
+          .from('rooms')
+          .delete()
+          .eq('room_id', newRoom.room_id);
+        throw new Error(`Lỗi khi tạo seats: ${seatsError.message}`);
+      }
+
+      return {
+        room_id: roomData.room_id,
+        cinema: {
+          cinema_id: cinemaData.cinema_id,
+          name: cinemaData.name,
+        },
+        name: roomData.name,
+        capacity: newSeats.length,
+        created_at: roomData.created_at,
+      };
+    } catch (err) {
+      console.error('❌ Lỗi khi tạo room và seats:', err.message);
       throw new InternalServerErrorException(
-        `Failed to create room: ${error.message}`,
+        'Không thể tạo phòng chiếu và ghế!',
       );
     }
-
-    return {
-      ...data,
-      cinema: cinemaData,
-    };
   }
-
   /**
    * Get all rooms with their cinema info
    */
