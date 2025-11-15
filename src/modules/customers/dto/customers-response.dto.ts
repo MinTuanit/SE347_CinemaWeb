@@ -10,8 +10,8 @@ export class CustomersResponseDto {
   @ApiProperty()
   email: string;
 
-  @ApiProperty()
-  password_hash: string;
+  // @ApiProperty()
+  // password_hash: string;
 
   @ApiProperty()
   phone_number: string;
@@ -21,4 +21,7 @@ export class CustomersResponseDto {
 
   @ApiProperty()
   cccd: string;
+
+  @ApiProperty()
+  dob: Date;
 }

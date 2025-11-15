@@ -1,29 +1,39 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsUUID, IsNotEmpty, IsInt, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsNotEmpty, IsArray, ValidateNested, IsInt } from 'class-validator';
+
+class SeatDto {
+  @ApiProperty({ example: 1, description: 'Số hàng của ghế' })
+  @IsInt()
+  row: number;
+
+  @ApiProperty({ example: 5, description: 'Số cột của ghế' })
+  @IsInt()
+  column: number;
+
+  @ApiProperty({ example: 'A5', description: 'Nhãn ghế hiển thị cho người dùng' })
+  @IsString()
+  @IsNotEmpty()
+  seat_label: string;
+}
 
 export class CreateRoomsDto {
-  @ApiProperty({
-    description: 'UUID of the cinema that this room belongs to',
-    example: 'c0fdbb9b-4a7b-4e6d-b2e1-f4cc1f8243aa',
-  })
-  @IsUUID()
+  @ApiProperty({ example: 'uuid-of-cinema', description: 'ID của rạp chiếu phim (cinema)' })
+  @IsString()
   @IsNotEmpty()
   cinema_id: string;
 
-  @ApiProperty({
-    description: 'Name of the room',
-    example: 'Room A',
-    maxLength: 255,
-  })
+  @ApiProperty({ example: 'Phòng chiếu 1', description: 'Tên của phòng chiếu' })
   @IsString()
   @IsNotEmpty()
   name: string;
 
   @ApiProperty({
-    description: 'Capacity (number of seats) in the room',
-    example: 120,
+    description: 'Danh sách các ghế trong phòng',
+    type: [SeatDto],
   })
-  @IsInt()
-  @Min(1)
-  capacity: number;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SeatDto)
+  seats: SeatDto[];
 }

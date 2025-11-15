@@ -15,7 +15,7 @@ export class CreateCustomersDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  password_hash: string;
+  password: string;
 
   @ApiProperty()
   @IsString()
