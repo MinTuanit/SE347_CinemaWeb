@@ -3,6 +3,8 @@ import {
   Inject,
   NotFoundException,
   InternalServerErrorException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
@@ -147,26 +149,107 @@ export class RoomsService {
    * Update a room by ID
    */
   async update(id: string, dto: UpdateRoomsDto): Promise<RoomsResponseDto> {
-    // Check if room exists
-    await this.findOne(id);
-
-    const updateData: any = { ...dto };
-
-    const { data, error } = await this.supabase
+    // 1️⃣ Lấy thông tin room cũ
+    const { data: roomData, error: roomError } = await this.supabase
       .from('rooms')
-      .update(updateData)
+      .select('*')
       .eq('room_id', id)
-      .select()
       .single();
 
-    if (error) {
-      throw new InternalServerErrorException(
-        `Failed to update room: ${error.message}`,
+    if (roomError || !roomData) {
+      throw new NotFoundException(`Room with ID ${id} not found`);
+    }
+
+    // 2️⃣ Update name nếu có
+    if (dto.name) {
+      const { error: nameError } = await this.supabase
+        .from('rooms')
+        .update({ name: dto.name })
+        .eq('room_id', id);
+
+      if (nameError) {
+        throw new HttpException(
+          { message: `Không thể update tên phòng: ${nameError.message}` },
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    }
+
+    let seatsCount = 0;
+    let newSeats;
+    // 3️⃣ Update seats nếu có
+    if (dto.seats) {
+      try {
+        // Xóa seats cũ
+        const { error: deleteError } = await this.supabase
+          .from('seats')
+          .delete()
+          .eq('room_id', id);
+
+        if (deleteError) {
+          throw new Error(`Xóa seats cũ thất bại: ${deleteError.message}`);
+        }
+
+        // Tạo seats mới
+        newSeats = dto.seats.map((seat) => ({
+          seat_id: uuidv4(),
+          room_id: id,
+          row: seat.row,
+          col: seat.column,
+          seat_label: seat.seat_label,
+        }));
+
+        const { error: insertError } = await this.supabase
+          .from('seats')
+          .insert(newSeats);
+
+        if (insertError) {
+          throw new Error(`Tạo seats mới thất bại: ${insertError.message}`);
+        }
+
+        seatsCount = newSeats.length;
+      } catch (err) {
+        console.error('❌ Lỗi khi update seats:', err.message);
+        throw new HttpException(
+          { message: 'Không thể update seats!' },
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+    } else {
+      // Nếu không update seats -> lấy số lượng seats hiện tại
+      const { data: existingSeats } = await this.supabase
+        .from('seats')
+        .select('seat_id')
+        .eq('room_id', id);
+
+      seatsCount = existingSeats?.length || 0;
+      newSeats = existingSeats || [];
+    }
+
+    // 4️⃣ Lấy cinema info
+    const { data: cinemaData, error: cinemaError } = await this.supabase
+      .from('cinemas')
+      .select('cinema_id, name')
+      .eq('cinema_id', roomData.cinema_id)
+      .single();
+
+    if (cinemaError || !cinemaData) {
+      throw new NotFoundException(
+        `Cinema with ID ${roomData.cinema_id} not found`,
       );
     }
 
-    const cinema = await this.getCinemaInfo(data.cinema_id);
-    return { ...data, cinema };
+    // 5️⃣ Trả về RoomDTO chuẩn format bạn muốn
+    return {
+      room_id: roomData.room_id,
+      cinema: {
+        cinema_id: cinemaData.cinema_id,
+        name: cinemaData.name,
+      },
+      name: dto.name || roomData.name,
+      capacity: seatsCount,
+      created_at: roomData.created_at,
+    };
   }
 
   /**
