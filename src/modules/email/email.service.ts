@@ -24,7 +24,9 @@ export class EmailService {
       invoice_code: string;
       movie_title: string;
       cinema_name: string;
+      cinema_address: string;
       showtime: string;
+      ticket_price: number;
       seats: string[];
       products?: Array<{ name: string; quantity: number; price: number }>;
       total_amount: number;
@@ -101,7 +103,13 @@ export class EmailService {
               <strong>Rạp Chiếu:</strong> ${bookingData.cinema_name}
             </p>
             <p style="margin: 10px 0; color: #333;">
+              <strong>Địa Chỉ:</strong> ${bookingData.cinema_address}
+            </p>
+            <p style="margin: 10px 0; color: #333;">
               <strong>Thời Gian:</strong> ${new Date(bookingData.showtime).toLocaleString('vi-VN')}
+            </p>
+            <p style="margin: 10px 0; color: #333;">
+              <strong>Giá Vé:</strong> <span style="color: #667eea; font-weight: bold;">${bookingData.ticket_price.toLocaleString('vi-VN')} ₫</span>
             </p>
             <p style="margin: 10px 0; color: #333;">
               <strong>Ghế:</strong> ${seatsStr}
@@ -154,6 +162,8 @@ export class EmailService {
     cancellationData: {
       invoice_code: string;
       movie_title: string;
+      cinema_name: string;
+      cinema_address: string;
       customer_name: string;
       refund_amount: number;
     },
@@ -175,6 +185,12 @@ export class EmailService {
             </p>
             <p style="margin: 10px 0; color: #333;">
               <strong>Phim:</strong> ${cancellationData.movie_title}
+            </p>
+            <p style="margin: 10px 0; color: #333;">
+              <strong>Rạp Chiếu:</strong> ${cancellationData.cinema_name}
+            </p>
+            <p style="margin: 10px 0; color: #333;">
+              <strong>Địa Chỉ:</strong> ${cancellationData.cinema_address}
             </p>
             <p style="margin: 10px 0; color: #333; border-top: 1px solid #eee; padding-top: 10px;">
               <strong>Số Tiền Hoàn:</strong> <span style="color: #27ae60; font-size: 18px; font-weight: bold;">${cancellationData.refund_amount.toLocaleString('vi-VN')} ₫</span>
@@ -215,6 +231,9 @@ export class EmailService {
     reminderData: {
       invoice_code: string;
       customer_name: string;
+      cinema_name: string;
+      cinema_address: string;
+      ticket_price: number;
       total_amount: number;
       showtime: string;
     },
@@ -235,7 +254,16 @@ export class EmailService {
               <strong>Mã Đặt Vé:</strong> ${reminderData.invoice_code}
             </p>
             <p style="margin: 10px 0; color: #333;">
+              <strong>Rạp Chiếu:</strong> ${reminderData.cinema_name}
+            </p>
+            <p style="margin: 10px 0; color: #333;">
+              <strong>Địa Chỉ:</strong> ${reminderData.cinema_address}
+            </p>
+            <p style="margin: 10px 0; color: #333;">
               <strong>Thời Gian Chiếu:</strong> ${new Date(reminderData.showtime).toLocaleString('vi-VN')}
+            </p>
+            <p style="margin: 10px 0; color: #333;">
+              <strong>Giá Vé:</strong> <span style="color: #e74c3c; font-weight: bold;">${reminderData.ticket_price.toLocaleString('vi-VN')} ₫</span>
             </p>
             <p style="margin: 10px 0; color: #333;">
               <strong>Số Tiền Cần Thanh Toán:</strong> <span style="color: #e74c3c; font-weight: bold;">${reminderData.total_amount.toLocaleString('vi-VN')} ₫</span>

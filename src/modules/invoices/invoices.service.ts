@@ -34,7 +34,7 @@ export class InvoicesService {
       // 1. Get showtime and seat prices with cinema and room info
       const { data: showtime, error: showtimeError } = await this.supabase
         .from('showtimes')
-        .select('*, movies(title), rooms(name, cinemas(name))')
+        .select('*, movies(title), rooms(name, cinemas(name, address))')
         .eq('showtime_id', dto.tickets.showtime_id)
         .single();
 
@@ -161,7 +161,9 @@ export class InvoicesService {
           invoice_code: invoiceCode,
           movie_title: movie?.title || 'Unknown Movie',
           cinema_name: cinema?.name || 'Unknown Cinema',
+          cinema_address: cinema?.address || 'Unknown Address',
           showtime: showtime.start_time,
+          ticket_price: showtime.price || 0,
           seats: seatLabels,
           products: productDetails,
           total_amount: dto.total_amount,
