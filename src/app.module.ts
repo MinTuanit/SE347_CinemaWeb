@@ -16,6 +16,7 @@ import { SavesModule } from './modules/saves/saves.module';
 import { SeatsModule } from './modules/seats/seats.module';
 import { ShowtimesModule } from './modules/showtimes/showtimes.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
+import { EmailModule } from './modules/email/email.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { TicketsModule } from './modules/tickets/tickets.module';
     SeatsModule,
     ShowtimesModule,
     TicketsModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -6,6 +6,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { BookingHistoryDto } from './dto/booking-history.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
 import { DashboardData, DailyData, GenreDistribution, TopMovie } from './dto/dashboard.dto';
+import { EmailService } from '../email/email.service';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -13,6 +14,7 @@ export class InvoicesService {
   constructor(
     @Inject('SUPABASE_CLIENT')
     private readonly supabase: SupabaseClient,
+    private readonly emailService: EmailService,
   ) { }
 
   private generateInvoiceCode(): string {
@@ -29,10 +31,10 @@ export class InvoicesService {
     const invoiceCode = this.generateInvoiceCode();
 
     try {
-      // 1. Get showtime and seat prices
+      // 1. Get showtime and seat prices with cinema and room info
       const { data: showtime, error: showtimeError } = await this.supabase
         .from('showtimes')
-        .select('*, movies(title)')
+        .select('*, movies(title), rooms(name, cinemas(name))')
         .eq('showtime_id', dto.tickets.showtime_id)
         .single();
 
@@ -40,10 +42,21 @@ export class InvoicesService {
         throw new BadRequestException('Showtime not found');
       }
 
-      // 2. Verify seats are available
+      // 2. Get customer email
+      const { data: customer, error: customerError } = await this.supabase
+        .from('customers')
+        .select('email, full_name')
+        .eq('customer_id', dto.customer_id)
+        .single();
+
+      if (customerError || !customer) {
+        throw new BadRequestException('Customer not found');
+      }
+
+      // 3. Verify seats are available and get seat labels
       const { data: existingTickets, error: ticketCheckError } = await this.supabase
         .from('tickets')
-        .select('seat_id')
+        .select('seat_id, seats(seat_label)')
         .eq('showtime_id', dto.tickets.showtime_id)
         .in('seat_id', dto.tickets.seats);
 
@@ -53,7 +66,7 @@ export class InvoicesService {
         throw new BadRequestException('Some seats are already booked');
       }
 
-      // 3. Create invoice
+      // 4. Create invoice
       const newInvoice = {
         invoice_id: invoiceId,
         invoice_code: invoiceCode,
@@ -72,7 +85,7 @@ export class InvoicesService {
 
       if (invoiceError) throw invoiceError;
 
-      // 4. Create tickets for each seat
+      // 5. Create tickets for each seat
       const ticketsToCreate = dto.tickets.seats.map(seatId => ({
         ticket_id: uuidv4(),
         invoice_id: invoiceId,
@@ -88,7 +101,7 @@ export class InvoicesService {
 
       if (ticketsError) throw ticketsError;
 
-      // 5. Create invoice_products
+      // 6. Create invoice_products
       if (dto.products && dto.products.length > 0) {
         const invoiceProductsToCreate = await Promise.all(
           dto.products.map(async (product) => {
@@ -108,8 +121,57 @@ export class InvoicesService {
         if (productsError) throw productsError;
       }
 
-      // 6. Return full invoice response
-      return await this.findOne(invoiceId);
+      // 7. Get full invoice response
+      const fullInvoice = await this.findOne(invoiceId);
+
+      // 8. Get seat labels and product details for email
+      const { data: seatsData, error: seatsError } = await this.supabase
+        .from('seats')
+        .select('seat_id, seat_label')
+        .in('seat_id', dto.tickets.seats);
+
+      const seatLabelMap = new Map((seatsData || []).map(s => [s.seat_id, s.seat_label]));
+      const seatLabels = Array.from(seatLabelMap.values());
+
+      // Get product details if any
+      let productDetails: Array<{ name: string; quantity: number; price: number }> = [];
+      if (dto.products && dto.products.length > 0) {
+        const { data: products } = await this.supabase
+          .from('products')
+          .select('product_id, name, price')
+          .in('product_id', dto.products.map(p => p.product_id));
+
+        productDetails = (products || []).map(p => {
+          const quantity = dto.products.find(item => item.product_id === p.product_id)?.quantity || 1;
+          return {
+            name: p.name,
+            quantity,
+            price: p.price,
+          };
+        });
+      }
+
+      // 9. Send confirmation email
+      try {
+        const room = Array.isArray(showtime.rooms) ? showtime.rooms[0] : showtime.rooms;
+        const cinema = Array.isArray(room?.cinemas) ? room.cinemas[0] : room?.cinemas;
+        const movie = Array.isArray(showtime.movies) ? showtime.movies[0] : showtime.movies;
+
+        await this.emailService.sendBookingConfirmation(customer.email, {
+          invoice_code: invoiceCode,
+          movie_title: movie?.title || 'Unknown Movie',
+          cinema_name: cinema?.name || 'Unknown Cinema',
+          showtime: showtime.start_time,
+          seats: seatLabels,
+          products: productDetails,
+          total_amount: dto.total_amount,
+          customer_name: customer.full_name,
+        });
+      } catch (emailError) {
+        console.warn('Failed to send confirmation email, but booking was successful:', emailError);
+      }
+
+      return fullInvoice;
 
     } catch (error) {
       // Rollback: delete invoice if created

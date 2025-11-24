@@ -105,5 +105,6 @@ export class CreateBookingDto {
     example: 'pending',
     enum: ['pending', 'completed', 'cancelled']
   })
+  @IsString()
   status: string;
 }
