@@ -5,6 +5,7 @@ import { InvoicesResponseDto } from './dto/invoices-response.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { BookingHistoryDto } from './dto/booking-history.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
+import { DashboardData, DailyData, GenreDistribution, TopMovie } from './dto/dashboard.dto';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -410,5 +411,163 @@ export class InvoicesService {
     };
 
     return statusMap[invoiceStatus?.toLowerCase()] || 'Pending';
+  }
+
+  async getDashboardData(month?: string): Promise<DashboardData> {
+    const targetMonth = month || new Date().toISOString().slice(0, 7);
+    const [year, monthNum] = targetMonth.split('-');
+
+    if (!year || !monthNum) {
+      throw new BadRequestException('Invalid month format. Use YYYY-MM');
+    }
+
+    const startDate = new Date(`${year}-${monthNum}-01T00:00:00Z`);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    try {
+      // 1. Get invoices for the month
+      const { data: invoices, error: invoicesError } = await this.supabase
+        .from('invoices')
+        .select(`
+          invoice_id,
+          total_amount,
+          created_at,
+          customer_id,
+          tickets(
+            ticket_id,
+            price,
+            showtimes(
+              movies(
+                movie_id,
+                title,
+                genre
+              )
+            )
+          )
+        `)
+        .gte('created_at', startDate.toISOString())
+        .lt('created_at', endDate.toISOString());
+
+      if (invoicesError) throw invoicesError;
+
+      // 2. Get total customers (all time)
+      const { data: customers, error: customersError } = await this.supabase
+        .from('customers')
+        .select('customer_id');
+
+      if (customersError) throw customersError;
+
+      // 3. Get movies showing (with showtimes in next 30 days)
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+      const { data: showtimes, error: showtimesError } = await this.supabase
+        .from('showtimes')
+        .select('movie_id')
+        .gte('start_time', new Date().toISOString())
+        .lt('start_time', thirtyDaysFromNow.toISOString());
+
+      if (showtimesError) throw showtimesError;
+
+      const uniqueMovies = new Set(showtimes?.map(s => s.movie_id) || []);
+
+      // Calculate stats
+      const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
+      const ticketsSold = invoices?.reduce((sum, inv) => sum + (inv.tickets?.length || 0), 0) || 0;
+
+      // 4. Calculate daily data (every 2 days)
+      const dailyData: DailyData[] = [];
+      const currentDate = new Date(startDate);
+      let dayCounter = 0;
+
+      while (currentDate < endDate && dayCounter < 15) {
+        const dayStart = new Date(currentDate);
+        const dayEnd = new Date(currentDate);
+        dayEnd.setDate(dayEnd.getDate() + 2);
+
+        const dayInvoices = invoices?.filter(inv => {
+          const invDate = new Date(inv.created_at);
+          return invDate >= dayStart && invDate < dayEnd;
+        }) || [];
+
+        const dayRevenue = dayInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+        const dayTickets = dayInvoices.reduce((sum, inv) => sum + (inv.tickets?.length || 0), 0);
+
+        dailyData.push({
+          date: dayStart.toISOString().slice(0, 10),
+          revenue: dayRevenue,
+          tickets: dayTickets,
+        });
+
+        currentDate.setDate(currentDate.getDate() + 2);
+        dayCounter++;
+      }
+
+      // 5. Calculate genre distribution
+      const genreMap = new Map<string, number>();
+      invoices?.forEach(inv => {
+        inv.tickets?.forEach(ticket => {
+          const showtimes = Array.isArray(ticket.showtimes) ? ticket.showtimes[0] : ticket.showtimes;
+          const movies = Array.isArray(showtimes?.movies) ? showtimes?.movies[0] : showtimes?.movies;
+          const genres = movies?.genre;
+          if (genres) {
+            const genreList = Array.isArray(genres) ? genres : [genres];
+            genreList.forEach(g => {
+              if (g) {
+                genreMap.set(g, (genreMap.get(g) || 0) + 1);
+              }
+            });
+          }
+        });
+      });
+
+      const totalGenreTickets = Array.from(genreMap.values()).reduce((a, b) => a + b, 0) || 1;
+      const genreDistribution: GenreDistribution[] = Array.from(genreMap.entries())
+        .map(([genre, count]) => ({
+          genre,
+          percentage: Math.round((count / totalGenreTickets) * 100),
+        }))
+        .sort((a, b) => b.percentage - a.percentage);
+
+      // 6. Get top movies
+      const movieTicketMap = new Map<string, { title: string; count: number }>();
+      invoices?.forEach(inv => {
+        inv.tickets?.forEach(ticket => {
+          const showtimes = Array.isArray(ticket.showtimes) ? ticket.showtimes[0] : ticket.showtimes;
+          const movie = Array.isArray(showtimes?.movies) ? showtimes?.movies[0] : showtimes?.movies;
+          if (movie?.movie_id) {
+            const current = movieTicketMap.get(movie.movie_id) || { title: movie.title || 'Unknown', count: 0 };
+            movieTicketMap.set(movie.movie_id, {
+              title: movie.title || 'Unknown',
+              count: current.count + 1,
+            });
+          }
+        });
+      });
+
+      const topMovies: TopMovie[] = Array.from(movieTicketMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
+        .map(m => ({
+          movie_name: m.title,
+          tickets_sold: m.count,
+        }));
+
+      return {
+        stats: {
+          total_revenue: totalRevenue,
+          total_customers: customers?.length || 0,
+          movies_showing: uniqueMovies.size,
+          tickets_sold: ticketsSold,
+        },
+        daily_data: dailyData,
+        genre_distribution: genreDistribution,
+        top_movies: topMovies,
+        month: targetMonth,
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch dashboard data: ${error.message}`);
+    }
   }
 }
