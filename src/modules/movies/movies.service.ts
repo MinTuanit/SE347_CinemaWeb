@@ -132,6 +132,8 @@ export class MoviesService {
       poster_url: dto.poster_url,
       slug: slugify(dto.title, { lower: true, strict: true }),
       created_at: new Date().toISOString(),
+      director: dto.director,
+      actors: dto.actors,
     };
 
     const { data, error } = await this.supabase
