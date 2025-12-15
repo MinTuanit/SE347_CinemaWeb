@@ -4,8 +4,9 @@ import { CustomersController } from './customers.controller';
 import { SupabaseModule } from 'src/config/supabase.module';
 
 @Module({
-  imports:[SupabaseModule],
+  imports: [SupabaseModule],
   controllers: [CustomersController],
   providers: [CustomersService],
+  exports: [CustomersService],
 })
-export class CustomersModule {}
+export class CustomersModule { }
