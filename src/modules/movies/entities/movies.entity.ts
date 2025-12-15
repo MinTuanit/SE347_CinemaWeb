@@ -13,6 +13,9 @@ export class Movies {
   @Column({ type: 'varchar', length: 255 })
   title: string;
 
+  @Column({ type: 'text', nullable: true, unique: true })
+  slug?: string;
+
   @Column({ type: 'text', nullable: true })
   description?: string;
 
