@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { CreateMoviesDto } from './dto/create-movies.dto';
+import slugify from 'slugify';
 import { UpdateMoviesDto } from './dto/update-movies.dto';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -110,6 +111,16 @@ export class MoviesService {
     return data;
   }
 
+  async findBySlug(slug: string) {
+    const { data, error } = await this.supabase
+      .from('movies')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   async create(dto: CreateMoviesDto) {
     const newMovie = {
       movie_id: uuidv4(),
@@ -119,6 +130,7 @@ export class MoviesService {
       release_date: dto.release_date,
       description: dto.description,
       poster_url: dto.poster_url,
+      slug: slugify(dto.title, { lower: true, strict: true }),
       created_at: new Date().toISOString(),
     };
 

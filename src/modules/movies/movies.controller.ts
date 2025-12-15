@@ -22,6 +22,11 @@ export class MoviesController {
     return this.service.findOne(id);
   }
 
+  @Get('/slug/:slug')
+  getMovieBySlug(@Param('slug') slug: string) {
+    return this.service.findBySlug(slug);
+  }
+
   @Get('/customer/:customer_id')
   findAllByCustomerId(@Param('customer_id') customer_id: string) {
     return this.service.findAllByCustomerId(customer_id);

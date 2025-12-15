@@ -10,8 +10,11 @@ export class MovieResponseDto {
   @ApiProperty({ example: '6d8f08c9-9db1-4e5f-bf31-8b942b8ad14e' })
   movie_id: string;
 
-  @ApiProperty({ example: 'Inception' })
+  @ApiProperty({ example: 'Avengers: Endgame' })
   title: string;
+
+  @ApiProperty({ example: 'avengers-endgame' })
+  slug: string;
 
   @ApiProperty({ example: 'A mind-bending thriller directed by Christopher Nolan', required: false })
   description?: string;
