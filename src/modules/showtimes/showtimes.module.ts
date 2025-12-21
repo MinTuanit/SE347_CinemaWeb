@@ -7,5 +7,6 @@ import { SupabaseModule } from 'src/config/supabase.module';
   imports: [SupabaseModule],
   controllers: [ShowtimesController],
   providers: [ShowtimesService],
+  exports: [ShowtimesService],
 })
-export class ShowtimesModule { }
+export class ShowtimesModule {}

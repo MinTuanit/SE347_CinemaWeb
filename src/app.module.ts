@@ -17,6 +17,7 @@ import { SeatsModule } from './modules/seats/seats.module';
 import { ShowtimesModule } from './modules/showtimes/showtimes.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { EmailModule } from './modules/email/email.module';
+import { ChatbotModule } from './modules/chatbot/chatbot.module';
 
 @Module({
   imports: [
@@ -42,8 +43,9 @@ import { EmailModule } from './modules/email/email.module';
     ShowtimesModule,
     TicketsModule,
     EmailModule,
+    ChatbotModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
