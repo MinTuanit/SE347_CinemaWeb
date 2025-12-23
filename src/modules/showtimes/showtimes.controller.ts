@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ShowtimesService } from './showtimes.service';
 import { CreateShowtimesDto } from './dto/create-showtimes.dto';
 import { UpdateShowtimesDto } from './dto/update-showtimes.dto';
+import { NotifyShowtimeDto } from './dto/notify-showtime.dto';
 
 @ApiTags('showtimes')
 @Controller('showtimes')
@@ -47,5 +48,16 @@ export class ShowtimesController {
   @ApiOperation({ summary: 'Delete a showtime' })
   remove(@Param('id') id: string) {
     return this.service.remove(id);
+  }
+
+  @Post('notify')
+  @ApiOperation({ summary: 'Notify users who saved a movie (provide showtime_id)' })
+  async notify(@Body() body: NotifyShowtimeDto) {
+    const { showtime_id } = body || ({} as NotifyShowtimeDto);
+    if (!showtime_id) {
+      return { message: 'showtime_id is required' };
+    }
+
+    return this.service.notifySavedUsers(showtime_id);
   }
 }
