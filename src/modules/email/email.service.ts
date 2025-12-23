@@ -16,6 +16,48 @@ export class EmailService {
   }
 
   /**
+   * Send notification to users who saved a movie about a new showtime
+   */
+  async sendNewShowtimeNotification(
+    email: string,
+    data: {
+      movie_title: string;
+      showtime: string;
+      cinema_name?: string;
+    },
+  ): Promise<void> {
+    const htmlTemplate = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h2 style="margin: 0; font-size: 20px;">Lịch chiếu mới: ${data.movie_title}</h2>
+        </div>
+        <div style="background: #fff; padding: 20px; border: 1px solid #eee;">
+          <p>Xin chào bạn,</p>
+          <p>Phim <strong>${data.movie_title}</strong> vừa có lịch chiếu mới:</p>
+          <ul>
+            <li><strong>Thời gian:</strong> ${new Date(data.showtime).toLocaleString('vi-VN')}</li>
+            ${data.cinema_name ? `<li><strong>Rạp:</strong> ${data.cinema_name}</li>` : ''}
+          </ul>
+          <p>Hãy kiểm tra và đặt vé nếu bạn quan tâm.</p>
+        </div>
+        <div style="text-align: center; font-size: 12px; color: #888; margin-top: 12px;">© Cinema Booking System</div>
+      </div>
+    `;
+
+    try {
+      await this.transporter.sendMail({
+        from: process.env.EMAIL_USER || 'noreply@cinema.com',
+        to: email,
+        subject: `Lịch chiếu mới: ${data.movie_title}`,
+        html: htmlTemplate,
+      });
+    } catch (error) {
+      console.error('Failed to send new showtime notification:', error);
+      throw new Error(`Email sending failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Send booking confirmation email
    */
   async sendBookingConfirmation(
