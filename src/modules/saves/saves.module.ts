@@ -7,5 +7,6 @@ import { SupabaseModule } from 'src/config/supabase.module';
   imports: [SupabaseModule],
   controllers: [SavesController],
   providers: [SavesService],
+  exports: [SavesService],
 })
-export class SavesModule { }
+export class SavesModule {}
