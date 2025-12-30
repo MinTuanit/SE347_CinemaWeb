@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-class CinemaDto {
+export class CinemaDto {
   @ApiProperty()
   cinema_id: string;
 
@@ -8,7 +8,7 @@ class CinemaDto {
   name: string;
 }
 
-class RoomDto {
+export class RoomDto {
   @ApiProperty()
   room_id: string;
 
@@ -16,7 +16,7 @@ class RoomDto {
   name: string;
 }
 
-class MovieDto {
+export class MovieDto {
   @ApiProperty()
   movie_id: string;
 
@@ -24,12 +24,12 @@ class MovieDto {
   title: string;
 }
 
-export class ShowtimesResponseDto {
+export class ShowtimeDto {
   @ApiProperty()
   showtime_id: string;
 
-  @ApiProperty({ type: () => CinemaDto })
-  cinema: CinemaDto;
+  @ApiProperty({ type: () => CinemaDto, nullable: true })
+  cinema: CinemaDto | null;
 
   @ApiProperty({ type: () => RoomDto })
   room: RoomDto;
