@@ -52,7 +52,16 @@ export class MoviesService {
     const { data, error } = await this.supabase.from('movies').select('*');
 
     if (error) throw error;
-    return data;
+
+    const results = await Promise.all((data || []).map(async (movie: any) => {
+      const status = await this.getMovieStatus(movie.movie_id, movie.release_date);
+      return {
+        ...movie,
+        status,
+      };
+    }));
+
+    return results;
   }
 
   async findAllByCustomerId(user_id: string) {
@@ -108,7 +117,11 @@ export class MoviesService {
       .single();
 
     if (error) throw error;
-    return data;
+    const status = await this.getMovieStatus(data.movie_id, data.release_date);
+    return {
+      ...data,
+      status,
+    };
   }
 
   async findBySlug(slug: string) {
@@ -118,7 +131,11 @@ export class MoviesService {
       .eq('slug', slug)
       .single();
     if (error) throw error;
-    return data;
+    const status = await this.getMovieStatus(data.movie_id, data.release_date);
+    return {
+      ...data,
+      status,
+    };
   }
 
   async create(dto: CreateMoviesDto) {
