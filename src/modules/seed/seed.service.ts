@@ -148,11 +148,11 @@ export class SeedService {
       }
       const cinemaIds = createdCinemas.map((c) => c.cinema_id);
 
-      // Seed rooms with seats (5 rooms per cinema)
+      // Seed rooms with seats (4 rooms per cinema)
       const roomDtos: any[] = [];
       const roomIds: string[] = [];
       for (const cinemaId of cinemaIds) {
-        for (let i = 1; i <= 5; i++) {
+        for (let i = 1; i <= 4; i++) {
           const seatsForRoom: any[] = [];
           for (let row = 1; row <= 10; row++) {
             for (let col = 1; col <= 10; col++) {
@@ -406,32 +406,52 @@ export class SeedService {
       // Seed products
       const productDtos = [
         {
-          name: 'Popcorn',
-          price: 50000.0,
+          name: 'Big Popcorn 35 Oz',
+          image: 'https://i.imgur.com/HphT7KN.png',
+          price: 70000.0,
           category: 'food',
-          image:
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTW2xjp9wlBo_WcLzf7ig80TRHsZePHmlmEhQ&s',
         },
         {
-          name: 'Coke',
-          price: 40000.0,
-          category: 'drink',
-          image:
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6-V-t7QDcLgBX6QteHAH2mwSihNGlMXlamA&s',
-        },
-        {
-          name: 'Sprite',
-          price: 40000.0,
-          category: 'drink',
-          image:
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTiZXgnEg5H6gF1dk-asdilmlseSOADTtxe8A&s',
-        },
-        {
-          name: 'Popcorn combo1',
-          price: 80000.0,
+          name: 'Combo 1 (Big Popcorn + Coke)',
+          image: 'https://i.imgur.com/Qr2pwRW.png',
+          price: 90000.0,
           category: 'other',
-          image:
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR8KaaxhLbViKKnzGRu8XkqDIMbVYCydu4q2Q&s',
+        },
+        {
+          name: 'Combo 2 (2 Big Popcorn + 2 Coke)',
+          image: 'https://i.imgur.com/J8NgzaV.png',
+          price: 175000.0,
+          category: 'other',
+        },
+        {
+          name: 'Lays 30 Oz',
+          image: 'https://i.imgur.com/xH3XypR.png',
+          price: 45000.0,
+          category: 'food',
+        },
+        {
+          name: 'Water 20 Oz',
+          image: 'https://i.imgur.com/cg8Zow1.png',
+          price: 20000.0,
+          category: 'drink',
+        },
+        {
+          name: 'Sprite 20 Oz',
+          image: 'https://i.imgur.com/vUFvQDy.png',
+          price: 35000.0,
+          category: 'drink',
+        },
+        {
+          name: 'Coke 20 Oz',
+          image: 'https://i.imgur.com/AJDaGc7.png',
+          price: 30000.0,
+          category: 'drink',
+        },
+        {
+          name: 'Small Popcorn 20 Oz',
+          image: 'https://i.imgur.com/grWOYhi.png',
+          price: 55000.0,
+          category: 'food',
         },
       ];
 
@@ -439,54 +459,73 @@ export class SeedService {
         await this.productsService.create(dto);
       }
 
-      // Seed showtimes (denser schedule - multiple showtimes per room per day)
+      // Seed showtimes (one movie per room per time slot - no overlaps)
       const showtimeDtos: any[] = [];
       const now = new Date();
 
-      // Create showtimes for the next 14 days
-      for (let day = 0; day <= 14; day++) {
+      // Create showtimes from 2 days ago to 6 days in the future (total 9 days)
+      for (let day = -2; day <= 6; day++) {
         const date = new Date(now);
         date.setDate(now.getDate() + day);
 
-        for (const movie of createdMovies) {
-          // Only create showtimes for movies that are already released
+        // Get movies that are already released by this date
+        const availableMovies = createdMovies.filter((movie) => {
           const movieReleaseDate = new Date(movie.release_date);
-          if (movieReleaseDate > date) {
-            continue; // Skip if movie not released yet
-          }
+          return movieReleaseDate <= date;
+        });
 
-          // Create showtimes for each room
-          for (const roomId of roomIds) {
-            // Multiple showtimes throughout the day (8am to 11pm)
-            const showtimeSlots = [8, 10, 12, 14, 16, 18, 20, 22];
+        if (availableMovies.length === 0) continue;
 
-            for (const hour of showtimeSlots) {
-              const startTime = new Date(date);
-              startTime.setHours(hour, 0, 0, 0);
-              const endTime = new Date(startTime);
-              endTime.setMinutes(startTime.getMinutes() + movie.duration_min);
+        // Create showtimes for each room (one movie per time slot)
+        for (const roomId of roomIds) {
+          // Shuffle available movies for variety
+          const shuffledMovies = [...availableMovies].sort(
+            () => Math.random() - 0.5,
+          );
 
-              // Skip if end time would be after midnight
-              if (endTime.getDate() !== startTime.getDate()) {
-                continue;
-              }
+          // Multiple showtimes throughout the day (8am to 11pm)
+          const showtimeSlots = [8, 10, 12, 14, 16, 18, 20, 22];
 
-              showtimeDtos.push({
-                movie_id: movie.movie_id,
-                room_id: roomId,
-                start_time: startTime.toISOString(),
-                end_time: endTime.toISOString(),
-                price: 45000.0 + (hour >= 18 ? 20000.0 : 0), // Evening shows cost more
-              });
+          for (let i = 0; i < showtimeSlots.length; i++) {
+            // Cycle through movies if we have more slots than movies
+            const movie = shuffledMovies[i % shuffledMovies.length];
+            const hour = showtimeSlots[i];
+
+            const startTime = new Date(date);
+            startTime.setHours(hour, 0, 0, 0);
+            const endTime = new Date(startTime);
+            endTime.setMinutes(startTime.getMinutes() + movie.duration_min);
+
+            // Skip if end time would be after midnight
+            if (endTime.getDate() !== startTime.getDate()) {
+              continue;
             }
+
+            showtimeDtos.push({
+              movie_id: movie.movie_id,
+              room_id: roomId,
+              start_time: startTime.toISOString(),
+              end_time: endTime.toISOString(),
+              price: 45000.0 + (hour >= 18 ? 20000.0 : 0), // Evening shows cost more
+            });
           }
         }
       }
 
       const createdShowtimes: any[] = [];
-      for (const dto of showtimeDtos) {
-        const showtime = await this.showtimesService.create(dto);
-        createdShowtimes.push(showtime[0]);
+
+      // Batch insert showtimes (much faster than one-by-one)
+      if (showtimeDtos.length > 0) {
+        const { data, error } = await this.supabase
+          .from('showtimes')
+          .insert(showtimeDtos)
+          .select();
+
+        if (error) {
+          throw new Error(`Failed to create showtimes: ${error.message}`);
+        }
+
+        createdShowtimes.push(...(data || []));
       }
 
       // Get all products for invoice_products
@@ -506,8 +545,8 @@ export class SeedService {
         const invoiceCount = Math.floor(Math.random() * 6); // 0 to 5
 
         for (let i = 0; i < invoiceCount; i++) {
-          // Create invoice with varied dates (from 60 days ago to 1 day ago)
-          const daysAgo = Math.floor(Math.random() * 60) + 1;
+          // Create invoice with varied dates (from 2 days ago to now - matching showtime range)
+          const daysAgo = Math.floor(Math.random() * 3); // 0 to 2 days ago
           const invoiceDate = new Date();
           invoiceDate.setDate(invoiceDate.getDate() - daysAgo);
 
@@ -548,16 +587,24 @@ export class SeedService {
           // Calculate ticket prices
           const ticketTotal = selectedSeats.length * selectedShowtime.price;
 
-          // Select 0-3 random products
+          // Select 0-3 random products (ensure no duplicates)
           const numProducts = Math.floor(Math.random() * 4); // 0 to 3
           const selectedProducts: Array<{ product: any; quantity: number }> =
             [];
           let productTotal = 0;
 
           if (numProducts > 0 && allProducts && allProducts.length > 0) {
-            for (let j = 0; j < numProducts; j++) {
-              const randomProduct =
-                allProducts[Math.floor(Math.random() * allProducts.length)];
+            const availableProducts = [...allProducts];
+            for (
+              let j = 0;
+              j < Math.min(numProducts, availableProducts.length);
+              j++
+            ) {
+              const randomIndex = Math.floor(
+                Math.random() * availableProducts.length,
+              );
+              const randomProduct = availableProducts[randomIndex];
+              availableProducts.splice(randomIndex, 1); // Remove selected product to avoid duplicates
               const quantity = Math.floor(Math.random() * 3) + 1; // 1 to 3
               selectedProducts.push({
                 product: randomProduct,
@@ -583,25 +630,40 @@ export class SeedService {
 
           await this.supabase.from('invoices').insert(newInvoice);
 
-          // Create tickets
-          for (const seat of selectedSeats) {
-            const ticketDto = {
-              showtime_id: selectedShowtime.showtime_id,
-              invoice_id: invoiceId,
-              seat_id: seat.seat_id,
-              price: selectedShowtime.price.toString(),
-            };
-            await this.ticketsService.create(ticketDto);
+          // Create tickets (batch insert)
+          const ticketDtos = selectedSeats.map((seat) => ({
+            showtime_id: selectedShowtime.showtime_id,
+            invoice_id: invoiceId,
+            seat_id: seat.seat_id,
+            price: selectedShowtime.price.toString(),
+          }));
+
+          if (ticketDtos.length > 0) {
+            const { error: ticketError } = await this.supabase
+              .from('tickets')
+              .insert(ticketDtos);
+            if (ticketError) {
+              console.error('Ticket creation error:', ticketError);
+            }
           }
 
-          // Create invoice_products
-          for (const productItem of selectedProducts) {
-            const invoiceProductDto = {
-              invoice_id: invoiceId,
-              product_id: productItem.product.product_id,
-              quantity: productItem.quantity.toString(),
-            };
-            await this.invoiceProductsService.create(invoiceProductDto);
+          // Create invoice_products (batch insert)
+          const invoiceProductDtos = selectedProducts.map((productItem) => ({
+            invoice_id: invoiceId,
+            product_id: productItem.product.product_id,
+            quantity: productItem.quantity.toString(),
+          }));
+
+          if (invoiceProductDtos.length > 0) {
+            const { error: invoiceProductError } = await this.supabase
+              .from('invoice_products')
+              .insert(invoiceProductDtos);
+            if (invoiceProductError) {
+              console.error(
+                'Invoice product creation error:',
+                invoiceProductError,
+              );
+            }
           }
         }
       }
