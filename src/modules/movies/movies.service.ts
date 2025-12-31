@@ -65,48 +65,28 @@ export class MoviesService {
   }
 
   async findAllByCustomerId(user_id: string) {
-    const { data, error } = await this.supabase
-      .from('saves')
-      .select(`
-        movies(
-          movie_id,
-          title,
-          description,
-          duration_min,
-          release_date,
-          rating,
-          poster_url,
-          director,
-          actors,
-          genre,
-          created_at
-        )
-      `)
-      .eq('customer_id', user_id);
+    const { data: movies, error } = await this.supabase.from('movies').select('*');
 
     if (error) throw error;
 
-    // Transform data to include isSaved flag and calculate status
-    const results = await Promise.all(data.map(async (save) => {
-      const movie = save.movies;
+    const { data: saves, error: savesError } = await this.supabase
+      .from('saves')
+      .select('movie_id')
+      .eq('customer_id', user_id);
 
-      // Handle case where movies might be an array or single object
-      const movieData = Array.isArray(movie) ? movie[0] : movie;
+    const savedMovieIds = new Set(saves?.map(save => save.movie_id) || []);
 
-      if (!movieData || !movieData.movie_id) {
-        return null;
-      }
-
-      const status = await this.getMovieStatus(movieData.movie_id, movieData.release_date);
-
+    const results = await Promise.all((movies || []).map(async (movie: any) => {
+      const status = await this.getMovieStatus(movie.movie_id, movie.release_date);
+      const isSaved = savedMovieIds.has(movie.movie_id);
       return {
-        ...movieData,
+        ...movie,
         status,
-        isSaved: true,
+        isSaved,
       };
     }));
 
-    return results.filter(movie => movie !== null);
+    return results;
   }
 
   async findOne(id: string) {
