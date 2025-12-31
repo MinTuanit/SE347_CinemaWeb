@@ -1,6 +1,7 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateShowtimesDto } from './dto/create-showtimes.dto';
 import { UpdateShowtimesDto } from './dto/update-showtimes.dto';
+import { ShowtimeDto, CinemaDto, RoomDto, MovieDto } from './dto/showtimes-response.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { EmailService } from 'src/modules/email/email.service';
@@ -11,7 +12,7 @@ export class ShowtimesService {
     @Inject('SUPABASE_CLIENT')
     private readonly supabase: SupabaseClient,
     private readonly emailService: EmailService,
-  ) { }
+  ) {}
 
   /**
    * Notify all users who saved `movieId` about a specific `showtimeId`.
@@ -117,8 +118,9 @@ export class ShowtimesService {
     if (error) throw error;
     return data;
   }
+
   // Get all showtimes
-  async findAll() {
+  async findAll(): Promise<ShowtimeDto[]> {
     const { data: showtimes, error: showtimeError } = await this.supabase
       .from('showtimes')
       .select('*, rooms(room_id, name, cinema_id), movies(movie_id, title)')
@@ -135,12 +137,36 @@ export class ShowtimesService {
 
     if (cinemaError) throw cinemaError;
 
-    const result = showtimes.map(s => ({
-      ...s,
-      cinema: cinemas.find(c => c.cinema_id === (s.rooms as any)?.cinema_id) || null,
-    }));
+    return showtimes.map(s => {
+      const dto = new ShowtimeDto();
+      dto.showtime_id = s.showtime_id;
+      dto.start_time = s.start_time;
+      dto.end_time = s.end_time;
+      dto.price = s.price;
+      dto.created_at = s.created_at;
 
-    return result;
+      const cinemaData = cinemas.find(c => c.cinema_id === (s.rooms as any)?.cinema_id);
+      if (cinemaData) {
+        const cinema = new CinemaDto();
+        cinema.cinema_id = cinemaData.cinema_id;
+        cinema.name = cinemaData.name;
+        dto.cinema = cinema;
+      } else {
+        dto.cinema = null;
+      }
+
+      const room = new RoomDto();
+      room.room_id = (s.rooms as any)?.room_id;
+      room.name = (s.rooms as any)?.name;
+      dto.room = room;
+
+      const movie = new MovieDto();
+      movie.movie_id = (s.movies as any)?.movie_id;
+      movie.title = (s.movies as any)?.title;
+      dto.movie = movie;
+
+      return dto;
+    });
   }
 
 

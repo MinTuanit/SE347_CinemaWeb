@@ -40,3 +40,6 @@ lerna-debug.log*
 .env.*.local
 
 supabase/.temp
+
+# API Documentation
+API_DOC.md
