@@ -17,6 +17,7 @@ import { SeatsModule } from './modules/seats/seats.module';
 import { ShowtimesModule } from './modules/showtimes/showtimes.module';
 import { TicketsModule } from './modules/tickets/tickets.module';
 import { EmailModule } from './modules/email/email.module';
+import { SeedModule } from './modules/seed/seed.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 
 @Module({
@@ -43,6 +44,7 @@ import { ChatbotModule } from './modules/chatbot/chatbot.module';
     ShowtimesModule,
     TicketsModule,
     EmailModule,
+    SeedModule,
     ChatbotModule,
   ],
   controllers: [AppController],

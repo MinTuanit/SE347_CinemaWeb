@@ -1,6 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { CreateMoviesDto } from './dto/create-movies.dto';
+import slugify from 'slugify';
 import { UpdateMoviesDto } from './dto/update-movies.dto';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -51,52 +52,41 @@ export class MoviesService {
     const { data, error } = await this.supabase.from('movies').select('*');
 
     if (error) throw error;
-    return data;
-  }
 
-  async findAllByCustomerId(user_id: string) {
-    const { data, error } = await this.supabase
-      .from('saves')
-      .select(`
-        movies(
-          movie_id,
-          title,
-          description,
-          duration_min,
-          release_date,
-          rating,
-          poster_url,
-          director,
-          actors,
-          genre,
-          created_at
-        )
-      `)
-      .eq('customer_id', user_id);
-
-    if (error) throw error;
-
-    // Transform data to include isSaved flag and calculate status
-    const results = await Promise.all(data.map(async (save) => {
-      const movie = save.movies;
-
-      // Handle case where movies might be an array or single object
-      const movieData = Array.isArray(movie) ? movie[0] : movie;
-
-      if (!movieData || !movieData.movie_id) {
-        return null;
-      }
-
-      const status = await this.getMovieStatus(movieData.movie_id, movieData.release_date);
-
+    const results = await Promise.all((data || []).map(async (movie: any) => {
+      const status = await this.getMovieStatus(movie.movie_id, movie.release_date);
       return {
-        ...movieData,
+        ...movie,
         status,
-        isSaved: true,
       };
     }));
 
-    return results.filter(movie => movie !== null);
+    return results;
+  }
+
+  async findAllByCustomerId(user_id: string) {
+    const { data: movies, error } = await this.supabase.from('movies').select('*');
+
+    if (error) throw error;
+
+    const { data: saves, error: savesError } = await this.supabase
+      .from('saves')
+      .select('movie_id')
+      .eq('customer_id', user_id);
+
+    const savedMovieIds = new Set(saves?.map(save => save.movie_id) || []);
+
+    const results = await Promise.all((movies || []).map(async (movie: any) => {
+      const status = await this.getMovieStatus(movie.movie_id, movie.release_date);
+      const isSaved = savedMovieIds.has(movie.movie_id);
+      return {
+        ...movie,
+        status,
+        isSaved,
+      };
+    }));
+
+    return results;
   }
 
   async findOne(id: string) {
@@ -107,7 +97,25 @@ export class MoviesService {
       .single();
 
     if (error) throw error;
-    return data;
+    const status = await this.getMovieStatus(data.movie_id, data.release_date);
+    return {
+      ...data,
+      status,
+    };
+  }
+
+  async findBySlug(slug: string) {
+    const { data, error } = await this.supabase
+      .from('movies')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+    if (error) throw error;
+    const status = await this.getMovieStatus(data.movie_id, data.release_date);
+    return {
+      ...data,
+      status,
+    };
   }
 
   async create(dto: CreateMoviesDto) {
@@ -119,7 +127,10 @@ export class MoviesService {
       release_date: dto.release_date,
       description: dto.description,
       poster_url: dto.poster_url,
+      slug: slugify(dto.title, { lower: true, strict: true }),
       created_at: new Date().toISOString(),
+      director: dto.director,
+      actors: dto.actors,
     };
 
     const { data, error } = await this.supabase

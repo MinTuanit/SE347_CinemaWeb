@@ -9,4 +9,4 @@ import { SupabaseModule } from 'src/config/supabase.module';
   providers: [MoviesService],
   exports: [MoviesService],
 })
-export class MoviesModule {}
+export class MoviesModule { }

@@ -1,13 +1,23 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  Delete,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ShowtimesService } from './showtimes.service';
 import { CreateShowtimesDto } from './dto/create-showtimes.dto';
 import { UpdateShowtimesDto } from './dto/update-showtimes.dto';
+import { NotifyShowtimeDto } from './dto/notify-showtime.dto';
+import { ShowtimeDto } from './dto/showtimes-response.dto';
 
 @ApiTags('showtimes')
 @Controller('showtimes')
 export class ShowtimesController {
-  constructor(private readonly service: ShowtimesService) { }
+  constructor(private readonly service: ShowtimesService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new showtime' })
@@ -17,7 +27,12 @@ export class ShowtimesController {
 
   @Get()
   @ApiOperation({ summary: 'Get all showtimes' })
-  findAll() {
+  @ApiResponse({
+    status: 200,
+    description: 'List of all showtimes',
+    type: [ShowtimeDto],
+  })
+  findAll(): Promise<ShowtimeDto[]> {
     return this.service.findAll();
   }
 
@@ -25,7 +40,7 @@ export class ShowtimesController {
   @ApiOperation({ summary: 'Get showtimes by movie ID within 7 days' })
   @ApiResponse({
     status: 200,
-    description: 'List of showtimes for the movie in the next 7 days'
+    description: 'List of showtimes for the movie in the next 7 days',
   })
   findByMovieId(@Param('movieId') movieId: string) {
     return this.service.findByMovieId(movieId);
@@ -47,5 +62,18 @@ export class ShowtimesController {
   @ApiOperation({ summary: 'Delete a showtime' })
   remove(@Param('id') id: string) {
     return this.service.remove(id);
+  }
+
+  @Post('notify')
+  @ApiOperation({
+    summary: 'Notify users who saved a movie (provide showtime_id)',
+  })
+  async notify(@Body() body: NotifyShowtimeDto) {
+    const { showtime_id } = body || ({} as NotifyShowtimeDto);
+    if (!showtime_id) {
+      return { message: 'showtime_id is required' };
+    }
+
+    return this.service.notifySavedUsers(showtime_id);
   }
 }
