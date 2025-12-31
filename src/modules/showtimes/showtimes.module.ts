@@ -10,4 +10,4 @@ import { EmailModule } from 'src/modules/email/email.module';
   providers: [ShowtimesService],
   exports: [ShowtimesService],
 })
-export class ShowtimesModule { }
+export class ShowtimesModule {}
