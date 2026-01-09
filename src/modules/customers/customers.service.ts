@@ -9,7 +9,6 @@ import { UpdateCustomersDto } from './dto/update-customers.dto';
 import { CustomersResponseDto } from './dto/customers-response.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class CustomersService {
@@ -19,15 +18,10 @@ export class CustomersService {
   ) {}
 
   async create(dto: CreateCustomersDto): Promise<CustomersResponseDto> {
-    //hash password
-    const saltRounds = 10; // số vòng hash, 10 là mức phổ biến
-    const hashedPassword = await bcrypt.hash(dto.password, saltRounds);
-
     const newCustomer = {
       customer_id: uuidv4(),
       full_name: dto.full_name,
       email: dto.email,
-      password_hash: hashedPassword,
       phone_number: dto.phone_number,
       cccd: dto.cccd,
       dob: dto.dob,
@@ -45,9 +39,8 @@ export class CustomersService {
         `Failed to create cinema: ${error.message}`,
       );
     }
-    const { password_hash, ...safeCustomer } = newCustomer;
 
-    return safeCustomer;
+    return newCustomer;
   }
 
   async findAll(): Promise<CustomersResponseDto[]> {

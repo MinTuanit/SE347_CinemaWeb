@@ -12,9 +12,6 @@ export class Customers {
   email: string;
 
   @Column()
-  password_hash: string;
-
-  @Column()
   phone_number: string;
 
   @Column()

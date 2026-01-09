@@ -14,11 +14,6 @@ export class CreateCustomersDto {
 
   @ApiProperty()
   @IsString()
-  @IsNotEmpty()
-  password: string;
-
-  @ApiProperty()
-  @IsString()
   phone_number: string;
 
   @ApiProperty()

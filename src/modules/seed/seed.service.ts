@@ -34,7 +34,6 @@ export class SeedService {
         {
           full_name: 'Nguyen Van A',
           email: 'customer1@example.com',
-          password: '123456',
           phone_number: '0123456789',
           created_at: new Date().toISOString(),
           cccd: '123456789012',
@@ -43,7 +42,6 @@ export class SeedService {
         {
           full_name: 'Tran Thi B',
           email: 'customer2@example.com',
-          password: '123456',
           phone_number: '0987654321',
           created_at: new Date().toISOString(),
           cccd: '987654321098',
@@ -52,7 +50,6 @@ export class SeedService {
         {
           full_name: 'Le Van C',
           email: 'customer3@example.com',
-          password: '123456',
           phone_number: '0912345678',
           created_at: new Date().toISOString(),
           cccd: '234567890123',
@@ -61,7 +58,6 @@ export class SeedService {
         {
           full_name: 'Pham Thi D',
           email: 'customer4@example.com',
-          password: '123456',
           phone_number: '0923456789',
           created_at: new Date().toISOString(),
           cccd: '345678901234',
@@ -70,7 +66,6 @@ export class SeedService {
         {
           full_name: 'Hoang Van E',
           email: 'customer5@example.com',
-          password: '123456',
           phone_number: '0934567890',
           created_at: new Date().toISOString(),
           cccd: '456789012345',
@@ -79,7 +74,6 @@ export class SeedService {
         {
           full_name: 'Vu Thi F',
           email: 'customer6@example.com',
-          password: '123456',
           phone_number: '0945678901',
           created_at: new Date().toISOString(),
           cccd: '567890123456',
@@ -88,7 +82,6 @@ export class SeedService {
         {
           full_name: 'Do Van G',
           email: 'customer7@example.com',
-          password: '123456',
           phone_number: '0956789012',
           created_at: new Date().toISOString(),
           cccd: '678901234567',
@@ -97,7 +90,6 @@ export class SeedService {
         {
           full_name: 'Bui Thi H',
           email: 'customer8@example.com',
-          password: '123456',
           phone_number: '0967890123',
           created_at: new Date().toISOString(),
           cccd: '789012345678',
@@ -106,7 +98,6 @@ export class SeedService {
         {
           full_name: 'Dang Van I',
           email: 'customer9@example.com',
-          password: '123456',
           phone_number: '0978901234',
           created_at: new Date().toISOString(),
           cccd: '890123456789',
@@ -115,7 +106,6 @@ export class SeedService {
         {
           full_name: 'Ngo Thi K',
           email: 'customer10@example.com',
-          password: '123456',
           phone_number: '0989012345',
           created_at: new Date().toISOString(),
           cccd: '901234567890',
