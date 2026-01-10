@@ -1,5 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  IsEnum,
+  IsOptional,
+  IsDateString,
+} from 'class-validator';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -28,11 +36,45 @@ export class SignUpDto {
   @ApiProperty({
     description: 'User full name',
     example: 'John Doe',
-    required: false,
   })
   @IsString()
   @IsNotEmpty()
-  full_name?: string;
+  full_name: string;
+
+  @ApiProperty({
+    description: 'User role',
+    enum: UserRole,
+    example: UserRole.CUSTOMER,
+    default: UserRole.CUSTOMER,
+  })
+  @IsEnum(UserRole)
+  @IsNotEmpty()
+  role: UserRole;
+
+  // Customer-specific fields (optional, required if role is CUSTOMER)
+  @ApiPropertyOptional({
+    description: 'Phone number (required for customers)',
+    example: '0123456789',
+  })
+  @IsString()
+  @IsOptional()
+  phone_number?: string;
+
+  @ApiPropertyOptional({
+    description: 'CCCD/ID number (required for customers)',
+    example: '123456789012',
+  })
+  @IsString()
+  @IsOptional()
+  cccd?: string;
+
+  @ApiPropertyOptional({
+    description: 'Date of birth (required for customers)',
+    example: '1990-01-01',
+  })
+  @IsDateString()
+  @IsOptional()
+  dob?: string;
 }
 
 export class SignInDto {
@@ -102,6 +144,24 @@ export class ResetPasswordDto {
 export class RefreshTokenDto {
   @ApiProperty({
     description: 'Refresh token',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  @IsString()
+  @IsNotEmpty()
+  refresh_token: string;
+}
+
+export class VerifyTokensDto {
+  @ApiProperty({
+    description: 'Access token from email verification link',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+  })
+  @IsString()
+  @IsNotEmpty()
+  access_token: string;
+
+  @ApiProperty({
+    description: 'Refresh token from email verification link',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   @IsString()

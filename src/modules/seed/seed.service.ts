@@ -718,11 +718,22 @@ export class SeedService {
     await this.supabase.from('seats').delete().not('seat_id', 'is', null);
     await this.supabase.from('rooms').delete().not('room_id', 'is', null);
     await this.supabase.from('cinemas').delete().not('cinema_id', 'is', null);
-    const { data, error } = await this.supabase
+    await this.supabase
       .from('customers')
       .delete()
       .not('customer_id', 'is', null);
-    console.log('Delete result:', data, error);
+    await this.supabase.from('admins').delete().not('user_id', 'is', null);
+
+    // Delete all auth users
+    const { data: authUsers, error: listError } =
+      await this.supabase.auth.admin.listUsers();
+
+    if (!listError && authUsers?.users) {
+      for (const user of authUsers.users) {
+        await this.supabase.auth.admin.deleteUser(user.id);
+      }
+    }
+
     return { message: 'Data cleared' };
   }
 }
