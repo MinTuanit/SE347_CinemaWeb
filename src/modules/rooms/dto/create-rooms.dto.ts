@@ -9,7 +9,7 @@ class SeatDto {
 
   @ApiProperty({ example: 5, description: 'Số cột của ghế' })
   @IsInt()
-  column: number;
+  col: number;
 
   @ApiProperty({ example: 'A5', description: 'Nhãn ghế hiển thị cho người dùng' })
   @IsString()

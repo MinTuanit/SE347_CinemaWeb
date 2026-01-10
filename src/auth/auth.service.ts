@@ -225,12 +225,33 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
+    // Determine user role
+    const role = await this.getUserRole(data.user.id);
+
+    // Get full_name from the appropriate table
+    let full_name = '';
+    if (role === UserRole.ADMIN) {
+      const { data: adminData } = await this.supabaseAdmin
+        .from('admins')
+        .select('full_name')
+        .eq('user_id', data.user.id)
+        .single();
+      full_name = adminData?.full_name || '';
+    } else if (role === UserRole.CUSTOMER) {
+      const { data: customerData } = await this.supabaseAdmin
+        .from('customers')
+        .select('full_name')
+        .eq('customer_id', data.user.id)
+        .single();
+      full_name = customerData?.full_name || '';
+    }
+
     return {
       id: data.user.id,
       email: data.user.email,
-      email_confirmed_at: data.user.email_confirmed_at,
+      full_name,
+      role,
       created_at: data.user.created_at,
-      user_metadata: data.user.user_metadata,
     };
   }
 

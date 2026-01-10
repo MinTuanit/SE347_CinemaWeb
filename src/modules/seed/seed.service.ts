@@ -141,18 +141,44 @@ export class SeedService {
       // Seed rooms with seats (4 rooms per cinema)
       const roomDtos: any[] = [];
       const roomIds: string[] = [];
+
+      // Define different seat configurations for variety
+      const roomConfigs = [
+        { rows: 10, cols: 10, skips: [] }, // Standard 10x10
+        { rows: 8, cols: 12, skips: [] }, // Wide room
+        { rows: 12, cols: 8, skips: [] }, // Tall room
+        { rows: 10, cols: 10, skips: [{ type: 'row', index: 5 }] }, // Missing row 5
+      ];
+
       for (const cinemaId of cinemaIds) {
         for (let i = 1; i <= 4; i++) {
+          const config = roomConfigs[i - 1]; // Cycle through configs
           const seatsForRoom: any[] = [];
-          for (let row = 1; row <= 10; row++) {
-            for (let col = 1; col <= 10; col++) {
+
+          for (let row = 1; row <= config.rows; row++) {
+            // Skip entire row if specified
+            if (config.skips.some(skip => skip.type === 'row' && skip.index === row)) {
+              continue;
+            }
+
+            // Calculate offset to center columns around 0
+            const offset = Math.floor((config.cols - 1) / 2);
+            const maxCol = offset + (config.cols % 2 === 0 ? 1 : 0);
+
+            for (let col = -offset; col <= maxCol; col++) {
+              // Skip entire column if specified
+              if (config.skips.some(skip => skip.type === 'col' && skip.index === col)) {
+                continue;
+              }
+
               seatsForRoom.push({
                 row: row,
-                column: col,
-                seat_label: String.fromCharCode(64 + row) + col,
+                col: col,
+                seat_label: String.fromCharCode(64 + row) + (col + offset + 1),
               });
             }
           }
+
           roomDtos.push({
             cinema_id: cinemaId,
             name: `Room ${i}`,
