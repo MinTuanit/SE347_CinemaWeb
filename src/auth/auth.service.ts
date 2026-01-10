@@ -3,33 +3,71 @@ import {
   UnauthorizedException,
   BadRequestException,
   InternalServerErrorException,
+  Inject,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseClient } from '../config/supabase.config';
-import { SignUpDto, SignInDto } from './dto/auth.dto';
+import { SignUpDto, SignInDto, UserRole } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
   private supabase: SupabaseClient;
+  private supabaseAdmin: SupabaseClient;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @Inject('SUPABASE_CLIENT')
+    private readonly supabaseClient: SupabaseClient,
+  ) {
     // Use anon key for auth operations (more secure than service role)
     this.supabase = createSupabaseClient(this.configService, false);
+    // Use service role for database queries
+    this.supabaseAdmin = this.supabaseClient;
+  }
+
+  /**
+   * Determine user role by checking if they exist in admins or customers table
+   */
+  private async getUserRole(userId: string): Promise<UserRole> {
+    // Check if user is an admin
+    const { data: adminData } = await this.supabaseAdmin
+      .from('admins')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (adminData) {
+      return UserRole.ADMIN;
+    }
+
+    // Check if user is a customer
+    const { data: customerData } = await this.supabaseAdmin
+      .from('customers')
+      .select('customer_id')
+      .eq('customer_id', userId)
+      .maybeSingle();
+
+    if (customerData) {
+      return UserRole.CUSTOMER;
+    }
+
+    // Default to customer if not found in either table
+    return UserRole.CUSTOMER;
   }
 
   /**
    * Sign up a new user with email and password
    */
   async signUp(signUpDto: SignUpDto) {
-    const { email, password, fullName } = signUpDto;
+    const { email, password, full_name } = signUpDto;
 
     const { data, error } = await this.supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          full_name: fullName,
+          full_name: full_name,
         },
       },
     });
@@ -79,13 +117,16 @@ export class AuthService {
       throw new UnauthorizedException('Failed to create session');
     }
 
+    // Determine user role
+    const role = await this.getUserRole(data.user.id);
+
     return {
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,
       user: {
         id: data.user.id,
         email: data.user.email,
-        email_confirmed_at: data.user.email_confirmed_at,
+        role,
         created_at: data.user.created_at,
       },
     };
@@ -136,13 +177,16 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
+    // Determine user role
+    const role = await this.getUserRole(data.user.id);
+
     return {
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,
       user: {
         id: data.user.id,
         email: data.user.email,
-        email_confirmed_at: data.user.email_confirmed_at,
+        role,
         created_at: data.user.created_at,
       },
     };

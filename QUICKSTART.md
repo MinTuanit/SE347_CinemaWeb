@@ -84,7 +84,7 @@ curl -X POST http://localhost:3000/auth/signup \
   -d '{
     "email":"test@example.com",
     "password":"password123",
-    "fullName":"Test User"
+    "full_name":"Test User"
   }'
 
 # 2. Sign in (save the access_token from response)
