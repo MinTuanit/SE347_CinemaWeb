@@ -6,6 +6,9 @@ export class CinemaDto {
 
   @ApiProperty()
   name: string;
+
+  @ApiProperty({ nullable: true })
+  address?: string;
 }
 
 export class RoomDto {

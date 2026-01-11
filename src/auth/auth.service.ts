@@ -27,33 +27,33 @@ export class AuthService {
   }
 
   /**
-   * Determine user role by checking if they exist in admins or customers table
+   * Determine user role and get full_name by checking if they exist in admins or customers table
    */
-  private async getUserRole(userId: string): Promise<UserRole> {
+  private async getUserRole(userId: string): Promise<{ role: UserRole; full_name: string }> {
     // Check if user is an admin
     const { data: adminData } = await this.supabaseAdmin
       .from('admins')
-      .select('user_id')
+      .select('user_id, full_name')
       .eq('user_id', userId)
       .maybeSingle();
 
     if (adminData) {
-      return UserRole.ADMIN;
+      return { role: UserRole.ADMIN, full_name: adminData.full_name || '' };
     }
 
     // Check if user is a customer
     const { data: customerData } = await this.supabaseAdmin
       .from('customers')
-      .select('customer_id')
+      .select('customer_id, full_name')
       .eq('customer_id', userId)
       .maybeSingle();
 
     if (customerData) {
-      return UserRole.CUSTOMER;
+      return { role: UserRole.CUSTOMER, full_name: customerData.full_name || '' };
     }
 
     // Default to customer if not found in either table
-    return UserRole.CUSTOMER;
+    return { role: UserRole.CUSTOMER, full_name: '' };
   }
 
   /**
@@ -154,8 +154,8 @@ export class AuthService {
       user: {
         id: data.user.id,
         email: data.user.email,
+        full_name: full_name,
         role: role,
-        email_confirmed_at: data.user.email_confirmed_at,
         created_at: data.user.created_at,
       },
       session: data.session
@@ -186,8 +186,8 @@ export class AuthService {
       throw new UnauthorizedException('Failed to create session');
     }
 
-    // Determine user role
-    const role = await this.getUserRole(data.user.id);
+    // Determine user role and full_name
+    const { role, full_name } = await this.getUserRole(data.user.id);
 
     return {
       access_token: data.session.access_token,
@@ -195,6 +195,7 @@ export class AuthService {
       user: {
         id: data.user.id,
         email: data.user.email,
+        full_name,
         role,
         created_at: data.user.created_at,
       },
@@ -225,26 +226,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired token');
     }
 
-    // Determine user role
-    const role = await this.getUserRole(data.user.id);
-
-    // Get full_name from the appropriate table
-    let full_name = '';
-    if (role === UserRole.ADMIN) {
-      const { data: adminData } = await this.supabaseAdmin
-        .from('admins')
-        .select('full_name')
-        .eq('user_id', data.user.id)
-        .single();
-      full_name = adminData?.full_name || '';
-    } else if (role === UserRole.CUSTOMER) {
-      const { data: customerData } = await this.supabaseAdmin
-        .from('customers')
-        .select('full_name')
-        .eq('customer_id', data.user.id)
-        .single();
-      full_name = customerData?.full_name || '';
-    }
+    // Determine user role and full_name
+    const { role, full_name } = await this.getUserRole(data.user.id);
 
     return {
       id: data.user.id,
@@ -267,8 +250,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // Determine user role
-    const role = await this.getUserRole(data.user.id);
+    // Determine user role and full_name
+    const { role, full_name } = await this.getUserRole(data.user.id);
 
     return {
       access_token: data.session.access_token,
@@ -276,6 +259,7 @@ export class AuthService {
       user: {
         id: data.user.id,
         email: data.user.email,
+        full_name,
         role,
         created_at: data.user.created_at,
       },
@@ -355,16 +339,16 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired tokens');
     }
 
-    // Determine user role
-    const role = await this.getUserRole(data.user.id);
+    // Determine user role and full_name
+    const { role, full_name } = await this.getUserRole(data.user.id);
 
     return {
       message: 'Email verified successfully',
       user: {
         id: data.user.id,
         email: data.user.email,
+        full_name,
         role,
-        name: data.user.user_metadata?.full_name || '',
         created_at: data.user.created_at,
       },
     };

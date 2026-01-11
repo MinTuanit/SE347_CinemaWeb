@@ -41,8 +41,9 @@ export class ShowtimesController {
   @ApiResponse({
     status: 200,
     description: 'List of showtimes for the movie in the next 7 days',
+    type: [ShowtimeDto],
   })
-  findByMovieId(@Param('movieId') movieId: string) {
+  findByMovieId(@Param('movieId') movieId: string): Promise<ShowtimeDto[]> {
     return this.service.findByMovieId(movieId);
   }
 

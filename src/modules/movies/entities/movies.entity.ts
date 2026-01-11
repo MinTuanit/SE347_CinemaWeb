@@ -31,6 +31,9 @@ export class Movies {
   @Column({ type: 'varchar', length: 255 })
   poster_url: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  trailer_url?: string;
+
   @Column({ type: 'varchar', length: 100, nullable: true })
   director?: string;
 

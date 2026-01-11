@@ -32,6 +32,11 @@ export class CreateMoviesDto {
   @IsNotEmpty()
   poster_url: string;
 
+  @ApiProperty({ example: 'https://example.com/inception-trailer.mp4', required: false })
+  @IsOptional()
+  @IsString()
+  trailer_url?: string;
+
   @ApiProperty({ example: 'Christopher Nolan', required: false })
   @IsOptional()
   @IsString()

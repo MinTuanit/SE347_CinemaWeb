@@ -29,6 +29,71 @@ export class SeedService {
 
   async seed() {
     try {
+      // Create admin auth account
+      console.log('Creating admin auth account...');
+      const { data: authData, error: authError } = await this.supabase.auth.admin.createUser({
+        email: process.env.SEED_ADMIN_EMAIL,
+        password: process.env.SEED_ADMIN_PASSWORD,
+        user_metadata: {
+          full_name: process.env.SEED_ADMIN_NAME,
+        },
+        email_confirm: true, // Auto-confirm the email
+      });
+
+      if (authError) {
+        console.error('Error creating admin auth account:', authError);
+        throw authError;
+      }
+
+      // Insert admin record in admins table
+      const { error: adminInsertError } = await this.supabase
+        .from('admins')
+        .insert({
+          user_id: authData.user?.id,
+          full_name: process.env.SEED_ADMIN_NAME,
+          email: process.env.SEED_ADMIN_EMAIL,
+          created_at: new Date().toISOString(),
+        });
+
+      if (adminInsertError) {
+        console.error('Error inserting admin record:', adminInsertError);
+        throw adminInsertError;
+      }
+
+      // Create customer auth account
+      console.log('Creating customer auth account...');
+      const { data: customerAuthData, error: customerAuthError } = await this.supabase.auth.admin.createUser({
+        email: process.env.SEED_CUSTOMER_EMAIL,
+        password: process.env.SEED_CUSTOMER_PASSWORD,
+        user_metadata: {
+          full_name: process.env.SEED_CUSTOMER_NAME,
+        },
+        email_confirm: true, // Auto-confirm the email
+      });
+
+      if (customerAuthError) {
+        console.error('Error creating customer auth account:', customerAuthError);
+        throw customerAuthError;
+      }
+
+      // Insert seeded customer record in customers table
+      const { error: customerInsertError } = await this.supabase
+        .from('customers')
+        .insert({
+          customer_id: customerAuthData.user?.id,
+          full_name: process.env.SEED_CUSTOMER_NAME,
+          email: process.env.SEED_CUSTOMER_EMAIL,
+          phone_number: '0123456789', // dummy phone
+          cccd: '123456789012', // dummy cccd
+          dob: new Date('1990-01-01'), // dummy dob
+          created_at: new Date().toISOString(),
+        });
+
+      if (customerInsertError) {
+        console.error('Error inserting seeded customer record:', customerInsertError);
+        throw customerInsertError;
+      }
+
       // Seed customers (10 customers)
       const customerDtos = [
         {
@@ -118,6 +183,17 @@ export class SeedService {
         const customer = await this.customersService.create(dto);
         createdCustomers.push(customer);
       }
+
+      // Add the seeded customer to the list
+      createdCustomers.push({
+        customer_id: customerAuthData.user?.id,
+        full_name: process.env.SEED_CUSTOMER_NAME,
+        email: process.env.SEED_CUSTOMER_EMAIL,
+        phone_number: '0123456789',
+        cccd: '123456789012',
+        dob: new Date('1990-01-01'),
+        created_at: new Date().toISOString(),
+      });
 
       // Seed cinemas
       const cinemaDtos = [
@@ -209,6 +285,7 @@ export class SeedService {
           rating: 'R',
           poster_url:
             'https://m.media-amazon.com/images/M/MV5BMDFkYTc0MGEtZmNhMC00ZDIzLWFmNTEtODM1ZmRlYWMwMWFmXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_.jpg',
+          trailer_url: 'https://youtu.be/PLl99DlL6b4?si=1-FfolHmuBCM3jrK',
           director: 'Frank Darabont',
           actors: ['Tim Robbins', 'Morgan Freeman'],
           genre: ['Drama'],
@@ -224,6 +301,7 @@ export class SeedService {
           rating: 'PG-13',
           poster_url:
             'https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_.jpg',
+          trailer_url: 'https://youtu.be/EXeTwQWrcwY?si=2rToKDQLXrrCRleh',
           director: 'Christopher Nolan',
           actors: ['Christian Bale', 'Heath Ledger', 'Aaron Eckhart'],
           genre: ['Action', 'Crime', 'Drama'],
@@ -239,6 +317,7 @@ export class SeedService {
           rating: 'PG-13',
           poster_url:
             'https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_.jpg',
+          trailer_url: 'https://youtu.be/YoHD9XEInc0?si=UnRU8YiDEApXEERC',
           director: 'Christopher Nolan',
           actors: ['Leonardo DiCaprio', 'Joseph Gordon-Levitt', 'Elliot Page'],
           genre: ['Action', 'Sci-Fi', 'Thriller'],
@@ -254,6 +333,7 @@ export class SeedService {
           rating: 'PG-13',
           poster_url:
             'https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_.jpg',
+          trailer_url: 'https://youtu.be/zSWdZVtXT7E?si=vSc75JodYT5CNLuG',
           director: 'Christopher Nolan',
           actors: ['Matthew McConaughey', 'Anne Hathaway', 'Jessica Chastain'],
           genre: ['Adventure', 'Drama', 'Sci-Fi'],
@@ -268,7 +348,8 @@ export class SeedService {
           ), // 2 months ago
           rating: 'R',
           poster_url:
-            'https://m.media-amazon.com/images/M/MV5BYWZjMjg3ZTgtOWEwYS00Y2NkLWJkNjctZmYxNWI4NmY4MmU5XkEyXkFqcGdeQXVyMTkxNjUyNQ@@._V1_.jpg',
+            'https://s3.amazonaws.com/nightjarprod/content/uploads/sites/130/2024/03/29150816/7IiTTgloJzvGI1TAYymCfbfl3vT-scaled.jpg',
+          trailer_url: 'https://youtu.be/5xH0HfJHsaY?si=Izg5WlVPHhkmvxkP',
           director: 'Bong Joon Ho',
           actors: ['Song Kang-ho', 'Lee Sun-kyun', 'Cho Yeo-jeong'],
           genre: ['Comedy', 'Drama', 'Thriller'],
@@ -285,6 +366,7 @@ export class SeedService {
           rating: 'PG-13',
           poster_url:
             'https://m.media-amazon.com/images/M/MV5BYjhiNjBlODctY2ZiOC00YjVlLWFlNzAtNTVhNzM1YjI1NzMxXkEyXkFqcGdeQXVyMjQxNTE1MDA@._V1_.jpg',
+          trailer_url: 'https://youtu.be/d9MyW72ELq0?si=nhzbbpt6AdePstcW',
           director: 'James Cameron',
           actors: ['Sam Worthington', 'Zoe Saldana', 'Sigourney Weaver'],
           genre: ['Action', 'Adventure', 'Fantasy'],
@@ -300,6 +382,7 @@ export class SeedService {
           rating: 'R',
           poster_url:
             'https://m.media-amazon.com/images/M/MV5BMDBmYTZjNjUtN2M1MS00MTQ2LTk2ODgtNzc2M2QyZGE5NTVjXkEyXkFqcGdeQXVyNzAwMjU2MTY@._V1_.jpg',
+          trailer_url: 'https://youtu.be/uYPbbksJxIg?si=jvoQkrTYOIag3ucW',
           director: 'Christopher Nolan',
           actors: ['Cillian Murphy', 'Emily Blunt', 'Matt Damon'],
           genre: ['Biography', 'Drama', 'History'],
@@ -315,6 +398,7 @@ export class SeedService {
           rating: 'R',
           poster_url:
             'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRed6AMI3GCIZF7_QtrFEkXOYkWYxzadM51Vw&s',
+          trailer_url: 'https://youtu.be/hXGozmNBwt4?si=Hv36dnMsw-a-oCqb',
           director: 'Nguyen Vinh Son',
           actors: ['Huynh Lap', 'La Thanh'],
           genre: ['Horror'],
@@ -330,6 +414,7 @@ export class SeedService {
           rating: 'PG-13',
           poster_url:
             'https://m.media-amazon.com/images/M/MV5BN2QyZGU4ZDctOWMzMy00NTc5LThlOGQtODhmNDI1NmY5YzAwXkEyXkFqcGdeQXVyMDM2NDM2MQ@@._V1_.jpg',
+          trailer_url: 'https://youtu.be/Way9Dexny3w?si=E2Ny5r4mHNJ2GJYp',
           director: 'Denis Villeneuve',
           actors: ['Timothée Chalamet', 'Zendaya', 'Rebecca Ferguson'],
           genre: ['Action', 'Adventure', 'Drama'],
@@ -345,6 +430,7 @@ export class SeedService {
           rating: 'PG',
           poster_url:
             'https://m.media-amazon.com/images/M/MV5BMzI0NmVkMjEtYmY4MS00ZDMxLTlkZmEtMzU4MDQxYTMzMjU2XkEyXkFqcGdeQXVyMzQ0MzA0NTM@._V1_.jpg',
+          trailer_url: 'https://youtu.be/shW9i6k8cB0?si=-Vsw5DUwHyQeRKRg',
           director: 'Joaquim Dos Santos',
           actors: ['Shameik Moore', 'Hailee Steinfeld', 'Brian Tyree Henry'],
           genre: ['Animation', 'Action', 'Adventure'],
@@ -360,13 +446,14 @@ export class SeedService {
           ), // 1 week from now
           rating: 'R',
           poster_url:
-            'https://m.media-amazon.com/images/M/MV5BZTk5ODY0MmQtMzA3Ni00NGY1LThiYzItZThiNjFiNDM4MTM3XkEyXkFqcGdeQXVyMTUzMTg2ODkz._V1_.jpg',
+            'https://resizing.flixster.com/mPJp85eApHd8ih9XF5E9d3-2LbM=/ems.cHJkLWVtcy1hc3NldHMvbW92aWVzLzUxODlkZDE1LTQyYjUtNDg5ZS05NjZmLWMxZDk1YWZhN2E1ZC5qcGc=',
+          trailer_url: 'https://youtu.be/73_1biulkYk?si=ZUuUiSSQMdNcba_H',
           director: 'Shawn Levy',
           actors: ['Ryan Reynolds', 'Hugh Jackman', 'Emma Corrin'],
           genre: ['Action', 'Comedy', 'Sci-Fi'],
         },
         {
-          title: 'The Batman Part II',
+          title: 'The Batman',
           description:
             "The sequel to Matt Reeves' critically acclaimed The Batman, continuing the dark and gritty story of Bruce Wayne.",
           duration_min: 155,
@@ -376,6 +463,7 @@ export class SeedService {
           rating: 'PG-13',
           poster_url:
             'https://m.media-amazon.com/images/M/MV5BMDdmMTBiNTYtMDIzNi00NGVlLWIzMDYtZTk3MTQ3NGQxZGEwXkEyXkFqcGdeQXVyMzMwOTU5MDk@._V1_.jpg',
+          trailer_url: 'https://youtu.be/mqqft2x_Aa4?si=67h7X7AzvUh9Ixxx',
           director: 'Matt Reeves',
           actors: ['Robert Pattinson', 'Zoë Kravitz', 'Paul Dano'],
           genre: ['Action', 'Crime', 'Drama'],
@@ -391,6 +479,7 @@ export class SeedService {
           rating: 'PG-13',
           poster_url:
             'https://m.media-amazon.com/images/M/MV5BYzFiZjc1YzctMDY3Zi00NGE5LTlmNWEtN2Q3OWFjYjY1NGM2XkEyXkFqcGdeQXVyMTUyMTUzNjQ0._V1_.jpg',
+          trailer_url: 'https://youtu.be/fsQgc9pCyDU?si=zEmozQrTDq9bfzQB',
           director: 'Christopher McQuarrie',
           actors: ['Tom Cruise', 'Hayley Atwell', 'Ving Rhames'],
           genre: ['Action', 'Adventure', 'Thriller'],
@@ -405,7 +494,8 @@ export class SeedService {
           ), // 2 months from now
           rating: 'PG-13',
           poster_url:
-            'https://m.media-amazon.com/images/M/MV5BYjhiNjBlODctY2ZiOC00YjVlLWFlNzAtNTVhNzM1YjI1NzMxXkEyXkFqcGdeQXVyMjQxNTE1MDA@._V1_.jpg',
+            'https://iguov8nhvyobj.vcdn.cloud/media/catalog/product/cache/1/image/c5f0a1eff4c394a251036189ccddaacd/c/g/cgv_350x495_1_2.jpg',
+          trailer_url: 'https://youtu.be/nb_fFj_0rq8?si=ovPhIhQYo2F2V_Yr',
           director: 'James Cameron',
           actors: ['Sam Worthington', 'Zoe Saldana', 'Sigourney Weaver'],
           genre: ['Action', 'Adventure', 'Fantasy'],

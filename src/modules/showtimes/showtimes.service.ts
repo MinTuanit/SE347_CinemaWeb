@@ -132,7 +132,7 @@ export class ShowtimesService {
 
     const { data: cinemas, error: cinemaError } = await this.supabase
       .from('cinemas')
-      .select('cinema_id, name')
+      .select('cinema_id, name, address')
       .in('cinema_id', cinemaIds);
 
     if (cinemaError) throw cinemaError;
@@ -150,6 +150,7 @@ export class ShowtimesService {
         const cinema = new CinemaDto();
         cinema.cinema_id = cinemaData.cinema_id;
         cinema.name = cinemaData.name;
+        cinema.address = cinemaData.address;
         dto.cinema = cinema;
       } else {
         dto.cinema = null;
@@ -225,7 +226,7 @@ export class ShowtimesService {
   }
 
   // Get showtimes by movie_id within 7 days
-  async findByMovieId(movieId: string) {
+  async findByMovieId(movieId: string): Promise<ShowtimeDto[]> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const sevenDaysFromNow = new Date(today);
@@ -249,15 +250,42 @@ export class ShowtimesService {
 
     const { data: cinemas, error: cinemaError } = await this.supabase
       .from('cinemas')
-      .select('cinema_id, name')
+      .select('cinema_id, name, address')
       .in('cinema_id', cinemaIds);
 
     if (cinemaError) throw cinemaError;
 
-    const result = showtimes.map(s => ({
-      ...s,
-      cinema: cinemas.find(c => c.cinema_id === s.rooms?.cinema_id) || null,
-    }));
+    const result = showtimes.map(s => {
+      const dto = new ShowtimeDto();
+      dto.showtime_id = s.showtime_id;
+      dto.start_time = s.start_time;
+      dto.end_time = s.end_time;
+      dto.price = s.price;
+      dto.created_at = s.created_at;
+
+      const cinemaData = cinemas.find(c => c.cinema_id === s.rooms?.cinema_id);
+      if (cinemaData) {
+        const cinema = new CinemaDto();
+        cinema.cinema_id = cinemaData.cinema_id;
+        cinema.name = cinemaData.name;
+        cinema.address = cinemaData.address;
+        dto.cinema = cinema;
+      } else {
+        dto.cinema = null;
+      }
+
+      const room = new RoomDto();
+      room.room_id = s.rooms?.room_id;
+      room.name = s.rooms?.name;
+      dto.room = room;
+
+      const movie = new MovieDto();
+      movie.movie_id = s.movies?.movie_id;
+      movie.title = s.movies?.title;
+      dto.movie = movie;
+
+      return dto;
+    });
 
     return result;
   }

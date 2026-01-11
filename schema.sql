@@ -127,6 +127,7 @@ CREATE TABLE IF NOT EXISTS "public"."movies" (
     "release_date" "date" NOT NULL,
     "rating" character varying,
     "poster_url" character varying NOT NULL,
+    "trailer_url" character varying,
     "director" character varying,
     "actors" json,
     "created_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
