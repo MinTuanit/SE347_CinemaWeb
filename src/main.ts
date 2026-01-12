@@ -17,7 +17,7 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-      transform: true,
+      transform: false,
     }),
   );
 
@@ -41,11 +41,21 @@ async function bootstrap() {
     )
     .build();
 
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory);
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('NestJS Supabase API')
+      .setDescription('Quick start template API')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+  }
+
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   console.log(`🚀 Application is running on: http://localhost:${port}`);
   console.log(`📚 Swagger documentation: http://localhost:${port}/api`);
