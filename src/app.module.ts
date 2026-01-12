@@ -19,6 +19,7 @@ import { TicketsModule } from './modules/tickets/tickets.module';
 import { EmailModule } from './modules/email/email.module';
 import { SeedModule } from './modules/seed/seed.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
+import { VnpayModule } from './modules/vnpay/vnpay.module';
 
 @Module({
   imports: [
@@ -46,8 +47,9 @@ import { ChatbotModule } from './modules/chatbot/chatbot.module';
     EmailModule,
     SeedModule,
     ChatbotModule,
+    VnpayModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

@@ -8,5 +8,6 @@ import { EmailModule } from '../email/email.module';
   imports: [SupabaseModule, EmailModule],
   controllers: [InvoicesController],
   providers: [InvoicesService],
+  exports: [InvoicesService],
 })
 export class InvoicesModule { }
