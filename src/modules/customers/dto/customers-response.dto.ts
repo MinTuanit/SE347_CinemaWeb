@@ -10,9 +10,6 @@ export class CustomersResponseDto {
   @ApiProperty()
   email: string;
 
-  // @ApiProperty()
-  // password_hash: string;
-
   @ApiProperty()
   phone_number: string;
 

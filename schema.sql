@@ -61,7 +61,6 @@ CREATE TABLE IF NOT EXISTS "public"."admins" (
     "user_id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "full_name" character varying NOT NULL,
     "email" character varying NOT NULL,
-    "password_hash" character varying NOT NULL,
     "created_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -84,7 +83,6 @@ CREATE TABLE IF NOT EXISTS "public"."customers" (
     "customer_id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "full_name" character varying NOT NULL,
     "email" character varying NOT NULL,
-    "password_hash" character varying NOT NULL,
     "phone_number" character varying,
     "created_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     "cccd" "text",
@@ -129,6 +127,7 @@ CREATE TABLE IF NOT EXISTS "public"."movies" (
     "release_date" "date" NOT NULL,
     "rating" character varying,
     "poster_url" character varying NOT NULL,
+    "trailer_url" character varying,
     "director" character varying,
     "actors" json,
     "created_at" timestamp without time zone DEFAULT CURRENT_TIMESTAMP,

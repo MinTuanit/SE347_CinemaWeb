@@ -11,8 +11,5 @@ export class AdminsResponseDto {
   email: string;
 
   @ApiProperty()
-  password_hash: string;
-
-  @ApiProperty()
   created_at: string;
 }

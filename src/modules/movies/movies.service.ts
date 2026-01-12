@@ -127,6 +127,8 @@ export class MoviesService {
       release_date: dto.release_date,
       description: dto.description,
       poster_url: dto.poster_url,
+      trailer_url: dto.trailer_url,
+      rating: dto.rating,
       slug: slugify(dto.title, { lower: true, strict: true }),
       created_at: new Date().toISOString(),
       director: dto.director,

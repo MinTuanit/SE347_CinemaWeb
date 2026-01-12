@@ -38,7 +38,7 @@ export class RoomsService {
       seat_id: uuidv4(),
       room_id: newRoom.room_id, // liên kết ghế với phòng này
       row: seat.row,
-      col: seat.column,
+      col: seat.col,
       seat_label: seat.seat_label,
     }));
 
@@ -195,7 +195,7 @@ export class RoomsService {
           seat_id: uuidv4(),
           room_id: id,
           row: seat.row,
-          col: seat.column,
+          col: seat.col,
           seat_label: seat.seat_label,
         }));
 

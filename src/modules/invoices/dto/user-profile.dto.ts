@@ -28,6 +28,13 @@ export class UserProfileDto {
   phone?: string;
 
   @ApiProperty({
+    description: 'Citizen Identification Number (CCCD)',
+    example: '123456789012',
+    required: false,
+  })
+  cccd?: string;
+
+  @ApiProperty({
     description: 'Date of birth',
     example: '1990-01-01',
     required: false,

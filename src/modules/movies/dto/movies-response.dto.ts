@@ -31,6 +31,9 @@ export class MovieResponseDto {
   @ApiProperty({ example: 'https://example.com/poster/inception.jpg', required: false })
   poster_url?: string;
 
+  @ApiProperty({ example: 'https://example.com/trailer/inception.mp4', required: false })
+  trailer_url?: string;
+
   @ApiProperty({ example: 'Christopher Nolan', required: false })
   director?: string;
 

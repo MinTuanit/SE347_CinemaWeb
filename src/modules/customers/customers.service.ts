@@ -9,7 +9,6 @@ import { UpdateCustomersDto } from './dto/update-customers.dto';
 import { CustomersResponseDto } from './dto/customers-response.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class CustomersService {
@@ -19,15 +18,10 @@ export class CustomersService {
   ) {}
 
   async create(dto: CreateCustomersDto): Promise<CustomersResponseDto> {
-    //hash password
-    const saltRounds = 10; // số vòng hash, 10 là mức phổ biến
-    const hashedPassword = await bcrypt.hash(dto.password, saltRounds);
-
     const newCustomer = {
       customer_id: uuidv4(),
       full_name: dto.full_name,
       email: dto.email,
-      password_hash: hashedPassword,
       phone_number: dto.phone_number,
       cccd: dto.cccd,
       dob: dto.dob,
@@ -42,12 +36,11 @@ export class CustomersService {
 
     if (error) {
       throw new InternalServerErrorException(
-        `Failed to create cinema: ${error.message}`,
+        `Failed to create customer: ${error.message}`,
       );
     }
-    const { password_hash, ...safeCustomer } = newCustomer;
 
-    return safeCustomer;
+    return newCustomer;
   }
 
   async findAll(): Promise<CustomersResponseDto[]> {
@@ -73,7 +66,7 @@ export class CustomersService {
       .single();
 
     if (error || !data) {
-      throw new NotFoundException(`Cinema with ID ${id} not found`);
+      throw new NotFoundException(`Customer with ID ${id} not found`);
     }
 
     return data;
@@ -90,13 +83,13 @@ export class CustomersService {
     const { data, error } = await this.supabase
       .from('customers')
       .update(updateData)
-      .eq('cinema_id', id)
+      .eq('customer_id', id)
       .select()
       .single();
 
     if (error) {
       throw new InternalServerErrorException(
-        `Failed to update cinema: ${error.message}`,
+        `Failed to update customer: ${error.message}`,
       );
     }
     return data;

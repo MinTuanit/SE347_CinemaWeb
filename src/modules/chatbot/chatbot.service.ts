@@ -1,19 +1,19 @@
 // gemini.service.ts
 import { Injectable } from '@nestjs/common';
 import { MoviesService } from '../movies/movies.service';
-import { ShowtimesService } from '../showtimes/showtimes.service';
+import { ProductsService } from '../products/products.service';
 import { CinemasService } from '../cinemas/cinemas.service';
 
 @Injectable()
 export class GeminiService {
-  private readonly apiKey = process.env.VITE_GEMINI_API_KEY;
+  private readonly apiKey = process.env.GEMINI_API_KEY;
   // Use v1 endpoint with a public model that supports generateContent
   private readonly apiUrl =
     'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
   constructor(
     private readonly moviesService: MoviesService,
-    private readonly showtimesService: ShowtimesService,
+    private readonly productsService: ProductsService,
     private readonly cinemasService: CinemasService,
   ) {}
 
@@ -25,6 +25,26 @@ export class GeminiService {
       role: string;
       parts: Array<{ text: string }>;
     }> = [];
+
+    // Fetch movies, products and cinemas data
+    const movies = await this.moviesService.findAll();
+    const products = await this.productsService.findAll();
+    const cinemas = await this.cinemasService.findAll();
+
+    const productsData = products.map((p) => ({
+      id: p.product_id,
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      category: p.category,
+    }));
+
+    const cinemasData = cinemas.map((c) => ({
+      id: c.cinema_id,
+      name: c.name,
+      address: c.address,
+      room_count: c.room_count,
+    }));
 
     contents.push({
       role: 'user',
@@ -38,7 +58,17 @@ You help customers with:
 - Ticket pricing and promotions
 - General cinema-related questions
 
+Here is our current movie catalog:
+${JSON.stringify(movies, null, 2)}
+
+Here are our available products (snacks, drinks, etc.):
+${JSON.stringify(productsData, null, 2)}
+
+Here are our cinema locations:
+${JSON.stringify(cinemasData, null, 2)}
+
 Please provide friendly, concise, and helpful responses.
+Use the movie, product and cinema data above to give accurate information.
 If you don't know something specific about our cinema, be honest and suggest contacting customer service.`,
         },
       ],

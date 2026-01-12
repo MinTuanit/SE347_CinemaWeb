@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, Query } from '@nestjs/common';
 import { SeatsService } from './seats.service';
 import { CreateSeatsDto } from './dto/create-seats.dto';
 import { UpdateSeatsDto } from './dto/update-seats.dto';
@@ -22,9 +22,8 @@ export class SeatsController {
     return this.service.findOne(id);
   }
 
-  @Get('room/:room_id/showtime/:showtime_id')
-  findByRoomIdAndShowtime(@Param('room_id') roomId: string,
-    @Param('showtime_id') showtimeId: string) {
+  @Get('room/:room_id')
+  findByRoomIdAndShowtime(@Param('room_id') roomId: string, @Query('showtime_id') showtimeId?: string) {
     return this.service.findByRoomIdAndShowtime(roomId, showtimeId);
   }
 

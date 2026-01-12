@@ -12,8 +12,5 @@ export class Admins {
   email: string;
 
   @Column()
-  password_hash: string;
-
-  @Column()
   created_at: string;
 }

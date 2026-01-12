@@ -23,6 +23,7 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   RefreshTokenDto,
+  VerifyTokensDto,
 } from './dto/auth.dto';
 
 @ApiTags('auth')
@@ -141,5 +142,23 @@ export class AuthController {
 
     const token = authorization.replace('Bearer ', '');
     return this.authService.resetPassword(token, resetPasswordDto.password);
+  }
+
+
+  @Post('verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify email confirmation tokens and establish session',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired tokens',
+  })
+  async verifyTokens(@Body() verifyTokensDto: VerifyTokensDto) {
+    return this.authService.verifyTokens(verifyTokensDto);
   }
 }
