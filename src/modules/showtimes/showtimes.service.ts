@@ -1,7 +1,17 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateShowtimesDto } from './dto/create-showtimes.dto';
 import { UpdateShowtimesDto } from './dto/update-showtimes.dto';
-import { ShowtimeDto, CinemaDto, RoomDto, MovieDto } from './dto/showtimes-response.dto';
+import {
+  ShowtimeDto,
+  CinemaDto,
+  RoomDto,
+  MovieDto,
+} from './dto/showtimes-response.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { EmailService } from 'src/modules/email/email.service';
@@ -47,7 +57,9 @@ export class ShowtimesService {
       return { total: 0, sent: 0, failed: [] };
     }
 
-    const customerIds = [...new Set(saves.map((s) => s.customer_id).filter(Boolean))];
+    const customerIds = [
+      ...new Set(saves.map((s) => s.customer_id).filter(Boolean)),
+    ];
 
     // fetch customers' emails
     const { data: customers, error: custErr } = await this.supabase
@@ -68,7 +80,11 @@ export class ShowtimesService {
       .single();
 
     // try fetch cinema name
-    const cinemaId = (showtimeData as any)?.rooms?.cinema_id ?? (Array.isArray((showtimeData as any)?.rooms) ? (showtimeData as any).rooms[0]?.cinema_id : undefined);
+    const cinemaId =
+      (showtimeData as any)?.rooms?.cinema_id ??
+      (Array.isArray((showtimeData as any)?.rooms)
+        ? (showtimeData as any).rooms[0]?.cinema_id
+        : undefined);
     let cinemaName: string | undefined = undefined;
     if (cinemaId) {
       const { data: cinemaData } = await this.supabase
@@ -103,7 +119,7 @@ export class ShowtimesService {
     return { total: emails.length, sent, failed };
   }
 
-  async create(dto: CreateShowtimesDto) {
+  async create(dto: CreateShowtimesDto): Promise<ShowtimeDto> {
     const newShowtime = {
       showtime_id: uuidv4(), // generate UUID
       ...dto,
@@ -116,7 +132,9 @@ export class ShowtimesService {
       .select();
 
     if (error) throw error;
-    return data;
+
+    // Fetch the created showtime with joins
+    return this.findOne(newShowtime.showtime_id);
   }
 
   // Get all showtimes
@@ -128,7 +146,11 @@ export class ShowtimesService {
 
     if (showtimeError) throw showtimeError;
 
-    const cinemaIds = [...new Set(showtimes.map(s => (s.rooms as any)?.cinema_id).filter(Boolean))];
+    const cinemaIds = [
+      ...new Set(
+        showtimes.map((s) => (s.rooms as any)?.cinema_id).filter(Boolean),
+      ),
+    ];
 
     const { data: cinemas, error: cinemaError } = await this.supabase
       .from('cinemas')
@@ -137,7 +159,7 @@ export class ShowtimesService {
 
     if (cinemaError) throw cinemaError;
 
-    return showtimes.map(s => {
+    return showtimes.map((s) => {
       const dto = new ShowtimeDto();
       dto.showtime_id = s.showtime_id;
       dto.start_time = s.start_time;
@@ -145,7 +167,9 @@ export class ShowtimesService {
       dto.price = s.price;
       dto.created_at = s.created_at;
 
-      const cinemaData = cinemas.find(c => c.cinema_id === (s.rooms as any)?.cinema_id);
+      const cinemaData = cinemas.find(
+        (c) => c.cinema_id === (s.rooms as any)?.cinema_id,
+      );
       if (cinemaData) {
         const cinema = new CinemaDto();
         cinema.cinema_id = cinemaData.cinema_id;
@@ -170,9 +194,8 @@ export class ShowtimesService {
     });
   }
 
-
   // Get a showtime by ID
-  async findOne(id: string) {
+  async findOne(id: string): Promise<ShowtimeDto> {
     const { data: showtimeData, error: showtimeError } = await this.supabase
       .from('showtimes')
       .select('*, rooms(room_id, name, cinema_id), movies(movie_id, title)')
@@ -182,24 +205,48 @@ export class ShowtimesService {
     if (showtimeError) throw showtimeError;
     if (!showtimeData) throw new NotFoundException(`Showtime ${id} not found`);
 
-    const cinemaId = (showtimeData as any)?.rooms?.cinema_id ?? (Array.isArray((showtimeData as any)?.rooms) ? (showtimeData as any).rooms[0]?.cinema_id : undefined);
+    const cinemaId =
+      (showtimeData as any)?.rooms?.cinema_id ??
+      (Array.isArray((showtimeData as any)?.rooms)
+        ? (showtimeData as any).rooms[0]?.cinema_id
+        : undefined);
 
-    let cinema: { cinema_id: string; name: string } | null = null;
+    let cinema: CinemaDto | null = null;
     if (cinemaId) {
       const { data: cinemaData, error: cinemaError } = await this.supabase
         .from('cinemas')
-        .select('cinema_id, name')
+        .select('cinema_id, name, address')
         .eq('cinema_id', cinemaId)
         .single();
 
       if (cinemaError) throw cinemaError;
-      cinema = cinemaData;
+      if (cinemaData) {
+        cinema = new CinemaDto();
+        cinema.cinema_id = cinemaData.cinema_id;
+        cinema.name = cinemaData.name;
+        cinema.address = cinemaData.address;
+      }
     }
 
-    return {
-      ...showtimeData,
-      cinema,
-    };
+    const dto = new ShowtimeDto();
+    dto.showtime_id = showtimeData.showtime_id;
+    dto.start_time = showtimeData.start_time;
+    dto.end_time = showtimeData.end_time;
+    dto.price = showtimeData.price;
+    dto.created_at = showtimeData.created_at;
+    dto.cinema = cinema;
+
+    const room = new RoomDto();
+    room.room_id = (showtimeData as any)?.rooms?.room_id;
+    room.name = (showtimeData as any)?.rooms?.name;
+    dto.room = room;
+
+    const movie = new MovieDto();
+    movie.movie_id = (showtimeData as any)?.movies?.movie_id;
+    movie.title = (showtimeData as any)?.movies?.title;
+    dto.movie = movie;
+
+    return dto;
   }
 
   // Update showtime
@@ -246,7 +293,9 @@ export class ShowtimesService {
       return [];
     }
 
-    const cinemaIds = [...new Set(showtimes.map(s => s.rooms?.cinema_id).filter(Boolean))];
+    const cinemaIds = [
+      ...new Set(showtimes.map((s) => s.rooms?.cinema_id).filter(Boolean)),
+    ];
 
     const { data: cinemas, error: cinemaError } = await this.supabase
       .from('cinemas')
@@ -255,7 +304,7 @@ export class ShowtimesService {
 
     if (cinemaError) throw cinemaError;
 
-    const result = showtimes.map(s => {
+    const result = showtimes.map((s) => {
       const dto = new ShowtimeDto();
       dto.showtime_id = s.showtime_id;
       dto.start_time = s.start_time;
@@ -263,7 +312,9 @@ export class ShowtimesService {
       dto.price = s.price;
       dto.created_at = s.created_at;
 
-      const cinemaData = cinemas.find(c => c.cinema_id === s.rooms?.cinema_id);
+      const cinemaData = cinemas.find(
+        (c) => c.cinema_id === s.rooms?.cinema_id,
+      );
       if (cinemaData) {
         const cinema = new CinemaDto();
         cinema.cinema_id = cinemaData.cinema_id;

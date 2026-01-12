@@ -36,7 +36,7 @@ export class CustomersService {
 
     if (error) {
       throw new InternalServerErrorException(
-        `Failed to create cinema: ${error.message}`,
+        `Failed to create customer: ${error.message}`,
       );
     }
 
@@ -66,7 +66,7 @@ export class CustomersService {
       .single();
 
     if (error || !data) {
-      throw new NotFoundException(`Cinema with ID ${id} not found`);
+      throw new NotFoundException(`Customer with ID ${id} not found`);
     }
 
     return data;
@@ -83,13 +83,13 @@ export class CustomersService {
     const { data, error } = await this.supabase
       .from('customers')
       .update(updateData)
-      .eq('cinema_id', id)
+      .eq('customer_id', id)
       .select()
       .single();
 
     if (error) {
       throw new InternalServerErrorException(
-        `Failed to update cinema: ${error.message}`,
+        `Failed to update customer: ${error.message}`,
       );
     }
     return data;

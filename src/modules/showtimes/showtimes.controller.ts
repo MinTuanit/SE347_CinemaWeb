@@ -21,7 +21,12 @@ export class ShowtimesController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new showtime' })
-  create(@Body() dto: CreateShowtimesDto) {
+  @ApiResponse({
+    status: 201,
+    description: 'The created showtime',
+    type: ShowtimeDto,
+  })
+  create(@Body() dto: CreateShowtimesDto): Promise<ShowtimeDto> {
     return this.service.create(dto);
   }
 
@@ -49,7 +54,12 @@ export class ShowtimesController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get showtime by ID' })
-  findOne(@Param('id') id: string) {
+  @ApiResponse({
+    status: 200,
+    description: 'The showtime details',
+    type: ShowtimeDto,
+  })
+  findOne(@Param('id') id: string): Promise<ShowtimeDto> {
     return this.service.findOne(id);
   }
 

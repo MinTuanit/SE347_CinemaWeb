@@ -1,11 +1,21 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateInvoicesDto } from './dto/update-invoices.dto';
 import { InvoicesResponseDto } from './dto/invoices-response.dto';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { BookingHistoryDto } from './dto/booking-history.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
-import { DashboardData, DailyData, GenreDistribution, TopMovie } from './dto/dashboard.dto';
+import {
+  DashboardData,
+  DailyData,
+  GenreDistribution,
+  TopMovie,
+} from './dto/dashboard.dto';
 import { EmailService } from '../email/email.service';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,7 +25,7 @@ export class InvoicesService {
     @Inject('SUPABASE_CLIENT')
     private readonly supabase: SupabaseClient,
     private readonly emailService: EmailService,
-  ) { }
+  ) {}
 
   private generateInvoiceCode(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -54,11 +64,12 @@ export class InvoicesService {
       }
 
       // 3. Verify seats are available and get seat labels
-      const { data: existingTickets, error: ticketCheckError } = await this.supabase
-        .from('tickets')
-        .select('seat_id, seats(seat_label)')
-        .eq('showtime_id', dto.tickets.showtime_id)
-        .in('seat_id', dto.tickets.seats);
+      const { data: existingTickets, error: ticketCheckError } =
+        await this.supabase
+          .from('tickets')
+          .select('seat_id, seats(seat_label)')
+          .eq('showtime_id', dto.tickets.showtime_id)
+          .in('seat_id', dto.tickets.seats);
 
       if (ticketCheckError) throw ticketCheckError;
 
@@ -72,7 +83,7 @@ export class InvoicesService {
         invoice_code: invoiceCode,
         customer_id: dto.customer_id,
         payment_method: dto.payment_method,
-        status: dto.status || "pending",
+        status: dto.status || 'pending',
         total_amount: dto.total_amount,
         created_at: new Date().toISOString(),
       };
@@ -86,7 +97,7 @@ export class InvoicesService {
       if (invoiceError) throw invoiceError;
 
       // 5. Create tickets for each seat
-      const ticketsToCreate = dto.tickets.seats.map(seatId => ({
+      const ticketsToCreate = dto.tickets.seats.map((seatId) => ({
         ticket_id: uuidv4(),
         invoice_id: invoiceId,
         showtime_id: dto.tickets.showtime_id,
@@ -105,13 +116,12 @@ export class InvoicesService {
       if (dto.products && dto.products.length > 0) {
         const invoiceProductsToCreate = await Promise.all(
           dto.products.map(async (product) => {
-
             return {
               invoice_id: invoiceId,
               product_id: product.product_id,
               quantity: product.quantity,
             };
-          })
+          }),
         );
 
         const { error: productsError } = await this.supabase
@@ -130,19 +140,30 @@ export class InvoicesService {
         .select('seat_id, seat_label')
         .in('seat_id', dto.tickets.seats);
 
-      const seatLabelMap = new Map((seatsData || []).map(s => [s.seat_id, s.seat_label]));
+      const seatLabelMap = new Map(
+        (seatsData || []).map((s) => [s.seat_id, s.seat_label]),
+      );
       const seatLabels = Array.from(seatLabelMap.values());
 
       // Get product details if any
-      let productDetails: Array<{ name: string; quantity: number; price: number }> = [];
+      let productDetails: Array<{
+        name: string;
+        quantity: number;
+        price: number;
+      }> = [];
       if (dto.products && dto.products.length > 0) {
         const { data: products } = await this.supabase
           .from('products')
           .select('product_id, name, price')
-          .in('product_id', dto.products.map(p => p.product_id));
+          .in(
+            'product_id',
+            dto.products.map((p) => p.product_id),
+          );
 
-        productDetails = (products || []).map(p => {
-          const quantity = dto.products.find(item => item.product_id === p.product_id)?.quantity || 1;
+        productDetails = (products || []).map((p) => {
+          const quantity =
+            dto.products.find((item) => item.product_id === p.product_id)
+              ?.quantity || 1;
           return {
             name: p.name,
             quantity,
@@ -153,9 +174,15 @@ export class InvoicesService {
 
       // 9. Send confirmation email
       try {
-        const room = Array.isArray(showtime.rooms) ? showtime.rooms[0] : showtime.rooms;
-        const cinema = Array.isArray(room?.cinemas) ? room.cinemas[0] : room?.cinemas;
-        const movie = Array.isArray(showtime.movies) ? showtime.movies[0] : showtime.movies;
+        const room = Array.isArray(showtime.rooms)
+          ? showtime.rooms[0]
+          : showtime.rooms;
+        const cinema = Array.isArray(room?.cinemas)
+          ? room.cinemas[0]
+          : room?.cinemas;
+        const movie = Array.isArray(showtime.movies)
+          ? showtime.movies[0]
+          : showtime.movies;
 
         await this.emailService.sendBookingConfirmation(customer.email, {
           invoice_code: invoiceCode,
@@ -170,11 +197,13 @@ export class InvoicesService {
           customer_name: customer.full_name,
         });
       } catch (emailError) {
-        console.warn('Failed to send confirmation email, but booking was successful:', emailError);
+        console.warn(
+          'Failed to send confirmation email, but booking was successful:',
+          emailError,
+        );
       }
 
       return fullInvoice;
-
     } catch (error) {
       // Rollback: delete invoice if created
       await this.supabase.from('invoices').delete().eq('invoice_id', invoiceId);
@@ -185,7 +214,8 @@ export class InvoicesService {
   async findAll(): Promise<InvoicesResponseDto[]> {
     const { data, error } = await this.supabase
       .from('invoices')
-      .select(`
+      .select(
+        `
       *,
       customers(customer_id, full_name, email),
       tickets(
@@ -201,42 +231,45 @@ export class InvoicesService {
         quantity,
         products(product_id, name, price)
       )
-    `)
+    `,
+      )
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    return data.map(invoice => {
+    return data.map((invoice) => {
       const ticketsData =
-        invoice?.tickets?.map(ticket => ({
+        invoice?.tickets?.map((ticket) => ({
           title: ticket.showtimes?.movies?.title || 'Unknown Movie',
           showtime: ticket.showtimes?.start_time || null,
           price: ticket.price || 0,
           seat: ticket.seats
             ? Array.isArray(ticket.seats)
-              ? ticket.seats.map(s => s.seat_label)
+              ? ticket.seats.map((s) => s.seat_label)
               : [ticket.seats.seat_label]
             : [],
         })) || [];
 
       // Get first ticket's info and collect all seats
       const firstTicket = ticketsData[0];
-      const allSeats = ticketsData.flatMap(t => t.seat);
+      const allSeats = ticketsData.flatMap((t) => t.seat);
 
-      const tickets = firstTicket ? {
-        title: firstTicket.title,
-        showtime: firstTicket.showtime,
-        price: firstTicket.price,
-        seats: allSeats,
-      } : {
-        title: 'Unknown Movie',
-        showtime: null,
-        price: 0,
-        seats: [],
-      };
+      const tickets = firstTicket
+        ? {
+            title: firstTicket.title,
+            showtime: firstTicket.showtime,
+            price: firstTicket.price,
+            seats: allSeats,
+          }
+        : {
+            title: 'Unknown Movie',
+            showtime: null,
+            price: 0,
+            seats: [],
+          };
 
       const products =
-        invoice?.invoice_products?.map(ip => ({
+        invoice?.invoice_products?.map((ip) => ({
           product_id: ip.products?.product_id,
           name: ip.products?.name,
           quantity: ip.quantity,
@@ -244,8 +277,14 @@ export class InvoicesService {
           total: ip.quantity * (ip.products?.price || 0),
         })) || [];
 
-      const totalTickets = ticketsData.reduce((sum, t) => sum + (t.price || 0), 0);
-      const totalProducts = products.reduce((sum, p) => sum + (p.total || 0), 0);
+      const totalTickets = ticketsData.reduce(
+        (sum, t) => sum + (t.price || 0),
+        0,
+      );
+      const totalProducts = products.reduce(
+        (sum, p) => sum + (p.total || 0),
+        0,
+      );
       const totalAmount = totalTickets + totalProducts;
 
       return {
@@ -267,7 +306,8 @@ export class InvoicesService {
   async findOne(id: string): Promise<InvoicesResponseDto> {
     const { data, error } = await this.supabase
       .from('invoices')
-      .select(`
+      .select(
+        `
       *,
       customers(customer_id, full_name, email),
       tickets(
@@ -283,7 +323,8 @@ export class InvoicesService {
         quantity,
         products(product_id, name, price)
       )
-    `)
+    `,
+      )
       .eq('invoice_id', id)
       .single();
 
@@ -291,35 +332,37 @@ export class InvoicesService {
     if (!data) throw new NotFoundException(`Invoice ${id} not found`);
 
     const ticketsData =
-      data?.tickets?.map(ticket => ({
+      data?.tickets?.map((ticket) => ({
         title: ticket.showtimes?.movies?.title || 'Unknown Movie',
         showtime: ticket.showtimes?.start_time || null,
         price: ticket.price || 0,
         seat: ticket.seats
           ? Array.isArray(ticket.seats)
-            ? ticket.seats.map(s => s.seat_label)
+            ? ticket.seats.map((s) => s.seat_label)
             : [ticket.seats.seat_label]
           : [],
       })) || [];
 
     // Get first ticket's info and collect all seats
     const firstTicket = ticketsData[0];
-    const allSeats = ticketsData.flatMap(t => t.seat);
+    const allSeats = ticketsData.flatMap((t) => t.seat);
 
-    const tickets = firstTicket ? {
-      title: firstTicket.title,
-      showtime: firstTicket.showtime,
-      price: firstTicket.price,
-      seats: allSeats,
-    } : {
-      title: 'Unknown Movie',
-      showtime: null,
-      price: 0,
-      seats: [],
-    };
+    const tickets = firstTicket
+      ? {
+          title: firstTicket.title,
+          showtime: firstTicket.showtime,
+          price: firstTicket.price,
+          seats: allSeats,
+        }
+      : {
+          title: 'Unknown Movie',
+          showtime: null,
+          price: 0,
+          seats: [],
+        };
 
     const products =
-      data?.invoice_products?.map(ip => ({
+      data?.invoice_products?.map((ip) => ({
         product_id: ip.products?.product_id,
         name: ip.products?.name,
         quantity: ip.quantity,
@@ -327,7 +370,10 @@ export class InvoicesService {
         total: ip.quantity * (ip.products?.price || 0),
       })) || [];
 
-    const totalTickets = ticketsData.reduce((sum, t) => sum + (t.price || 0), 0);
+    const totalTickets = ticketsData.reduce(
+      (sum, t) => sum + (t.price || 0),
+      0,
+    );
     const totalProducts = products.reduce((sum, p) => sum + (p.total || 0), 0);
     const totalAmount = totalTickets + totalProducts;
 
@@ -382,7 +428,8 @@ export class InvoicesService {
     // Get booking history from invoices
     const { data: invoices, error: invoicesError } = await this.supabase
       .from('invoices')
-      .select(`
+      .select(
+        `
         invoice_id,
         created_at,
         status,
@@ -400,28 +447,39 @@ export class InvoicesService {
           ),
           seats(seat_label)
         )
-      `)
+      `,
+      )
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false });
 
     if (invoicesError) {
-      throw new Error(`Failed to fetch booking history: ${invoicesError.message}`);
+      throw new Error(
+        `Failed to fetch booking history: ${invoicesError.message}`,
+      );
     }
 
     // Transform invoices to booking history
     const bookingHistory: BookingHistoryDto[] = (invoices || [])
-      .filter(invoice => invoice.tickets && invoice.tickets.length > 0)
-      .map(invoice => {
+      .filter((invoice) => invoice.tickets && invoice.tickets.length > 0)
+      .map((invoice) => {
         const firstTicket = invoice.tickets[0];
 
         // Handle nested data structures
-        const showtime = Array.isArray(firstTicket?.showtimes) ? firstTicket.showtimes[0] : firstTicket?.showtimes;
-        const movie = Array.isArray(showtime?.movies) ? showtime.movies[0] : showtime?.movies;
-        const room = Array.isArray(showtime?.rooms) ? showtime.rooms[0] : showtime?.rooms;
-        const cinema = Array.isArray(room?.cinemas) ? room.cinemas[0] : room?.cinemas;
+        const showtime = Array.isArray(firstTicket?.showtimes)
+          ? firstTicket.showtimes[0]
+          : firstTicket?.showtimes;
+        const movie = Array.isArray(showtime?.movies)
+          ? showtime.movies[0]
+          : showtime?.movies;
+        const room = Array.isArray(showtime?.rooms)
+          ? showtime.rooms[0]
+          : showtime?.rooms;
+        const cinema = Array.isArray(room?.cinemas)
+          ? room.cinemas[0]
+          : room?.cinemas;
 
         const allSeats = invoice.tickets
-          .map(t => {
+          .map((t) => {
             const seat = Array.isArray(t.seats) ? t.seats[0] : t.seats;
             return seat?.seat_label;
           })
@@ -443,8 +501,9 @@ export class InvoicesService {
       customer_id: customer.customer_id,
       full_name: customer.full_name,
       email: customer.email,
-      phone: customer.phone,
-      date_of_birth: customer.date_of_birth,
+      phone: customer.phone_number,
+      cccd: customer.cccd,
+      date_of_birth: customer.dob,
       member_since: customer.created_at,
       total_bookings: bookingHistory.length,
       booking_history: bookingHistory,
@@ -465,7 +524,10 @@ export class InvoicesService {
   private mapInvoiceStatus(
     invoiceStatus: string,
   ): 'Pending' | 'Confirmed' | 'Cancelled' | 'Completed' {
-    const statusMap: Record<string, 'Pending' | 'Confirmed' | 'Cancelled' | 'Completed'> = {
+    const statusMap: Record<
+      string,
+      'Pending' | 'Confirmed' | 'Cancelled' | 'Completed'
+    > = {
       pending: 'Pending',
       paid: 'Confirmed',
       confirmed: 'Confirmed',
@@ -493,7 +555,8 @@ export class InvoicesService {
       // 1. Get invoices for the month
       const { data: invoices, error: invoicesError } = await this.supabase
         .from('invoices')
-        .select(`
+        .select(
+          `
           invoice_id,
           total_amount,
           created_at,
@@ -509,7 +572,8 @@ export class InvoicesService {
               )
             )
           )
-        `)
+        `,
+        )
         .gte('created_at', startDate.toISOString())
         .lt('created_at', endDate.toISOString());
 
@@ -534,11 +598,14 @@ export class InvoicesService {
 
       if (showtimesError) throw showtimesError;
 
-      const uniqueMovies = new Set(showtimes?.map(s => s.movie_id) || []);
+      const uniqueMovies = new Set(showtimes?.map((s) => s.movie_id) || []);
 
       // Calculate stats
-      const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
-      const ticketsSold = invoices?.reduce((sum, inv) => sum + (inv.tickets?.length || 0), 0) || 0;
+      const totalRevenue =
+        invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
+      const ticketsSold =
+        invoices?.reduce((sum, inv) => sum + (inv.tickets?.length || 0), 0) ||
+        0;
 
       // 4. Calculate daily data (every 2 days)
       const dailyData: DailyData[] = [];
@@ -550,13 +617,20 @@ export class InvoicesService {
         const dayEnd = new Date(currentDate);
         dayEnd.setDate(dayEnd.getDate() + 2);
 
-        const dayInvoices = invoices?.filter(inv => {
-          const invDate = new Date(inv.created_at);
-          return invDate >= dayStart && invDate < dayEnd;
-        }) || [];
+        const dayInvoices =
+          invoices?.filter((inv) => {
+            const invDate = new Date(inv.created_at);
+            return invDate >= dayStart && invDate < dayEnd;
+          }) || [];
 
-        const dayRevenue = dayInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
-        const dayTickets = dayInvoices.reduce((sum, inv) => sum + (inv.tickets?.length || 0), 0);
+        const dayRevenue = dayInvoices.reduce(
+          (sum, inv) => sum + (inv.total_amount || 0),
+          0,
+        );
+        const dayTickets = dayInvoices.reduce(
+          (sum, inv) => sum + (inv.tickets?.length || 0),
+          0,
+        );
 
         dailyData.push({
           date: dayStart.toISOString().slice(0, 10),
@@ -570,14 +644,18 @@ export class InvoicesService {
 
       // 5. Calculate genre distribution
       const genreMap = new Map<string, number>();
-      invoices?.forEach(inv => {
-        inv.tickets?.forEach(ticket => {
-          const showtimes = Array.isArray(ticket.showtimes) ? ticket.showtimes[0] : ticket.showtimes;
-          const movies = Array.isArray(showtimes?.movies) ? showtimes?.movies[0] : showtimes?.movies;
+      invoices?.forEach((inv) => {
+        inv.tickets?.forEach((ticket) => {
+          const showtimes = Array.isArray(ticket.showtimes)
+            ? ticket.showtimes[0]
+            : ticket.showtimes;
+          const movies = Array.isArray(showtimes?.movies)
+            ? showtimes?.movies[0]
+            : showtimes?.movies;
           const genres = movies?.genre;
           if (genres) {
             const genreList = Array.isArray(genres) ? genres : [genres];
-            genreList.forEach(g => {
+            genreList.forEach((g) => {
               if (g) {
                 genreMap.set(g, (genreMap.get(g) || 0) + 1);
               }
@@ -586,8 +664,11 @@ export class InvoicesService {
         });
       });
 
-      const totalGenreTickets = Array.from(genreMap.values()).reduce((a, b) => a + b, 0) || 1;
-      const genreDistribution: GenreDistribution[] = Array.from(genreMap.entries())
+      const totalGenreTickets =
+        Array.from(genreMap.values()).reduce((a, b) => a + b, 0) || 1;
+      const genreDistribution: GenreDistribution[] = Array.from(
+        genreMap.entries(),
+      )
         .map(([genre, count]) => ({
           genre,
           percentage: Math.round((count / totalGenreTickets) * 100),
@@ -595,13 +676,23 @@ export class InvoicesService {
         .sort((a, b) => b.percentage - a.percentage);
 
       // 6. Get top movies
-      const movieTicketMap = new Map<string, { title: string; count: number }>();
-      invoices?.forEach(inv => {
-        inv.tickets?.forEach(ticket => {
-          const showtimes = Array.isArray(ticket.showtimes) ? ticket.showtimes[0] : ticket.showtimes;
-          const movie = Array.isArray(showtimes?.movies) ? showtimes?.movies[0] : showtimes?.movies;
+      const movieTicketMap = new Map<
+        string,
+        { title: string; count: number }
+      >();
+      invoices?.forEach((inv) => {
+        inv.tickets?.forEach((ticket) => {
+          const showtimes = Array.isArray(ticket.showtimes)
+            ? ticket.showtimes[0]
+            : ticket.showtimes;
+          const movie = Array.isArray(showtimes?.movies)
+            ? showtimes?.movies[0]
+            : showtimes?.movies;
           if (movie?.movie_id) {
-            const current = movieTicketMap.get(movie.movie_id) || { title: movie.title || 'Unknown', count: 0 };
+            const current = movieTicketMap.get(movie.movie_id) || {
+              title: movie.title || 'Unknown',
+              count: 0,
+            };
             movieTicketMap.set(movie.movie_id, {
               title: movie.title || 'Unknown',
               count: current.count + 1,
@@ -613,7 +704,7 @@ export class InvoicesService {
       const topMovies: TopMovie[] = Array.from(movieTicketMap.values())
         .sort((a, b) => b.count - a.count)
         .slice(0, 10)
-        .map(m => ({
+        .map((m) => ({
           movie_name: m.title,
           tickets_sold: m.count,
         }));
