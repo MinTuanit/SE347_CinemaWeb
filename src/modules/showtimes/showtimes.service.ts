@@ -22,7 +22,7 @@ export class ShowtimesService {
     @Inject('SUPABASE_CLIENT')
     private readonly supabase: SupabaseClient,
     private readonly emailService: EmailService,
-  ) {}
+  ) { }
 
   /**
    * Notify all users who saved `movieId` about a specific `showtimeId`.
@@ -33,10 +33,20 @@ export class ShowtimesService {
       throw new BadRequestException('showtimeId is required');
     }
 
-    // fetch showtime info (includes movie_id)
+    // fetch showtime info with movie title and cinema name in one query
     const { data: showtimeData, error: showtimeErr } = await this.supabase
       .from('showtimes')
-      .select('movie_id, start_time, rooms(room_id, name, cinema_id)')
+      .select(`
+        movie_id,
+        start_time,
+        movies(title),
+        rooms(
+          room_id,
+          name,
+          cinema_id,
+          cinemas(name)
+        )
+      `)
       .eq('showtime_id', showtimeId)
       .single();
 
@@ -46,76 +56,81 @@ export class ShowtimesService {
     const movieId = (showtimeData as any).movie_id;
     if (!movieId) return { total: 0, sent: 0, failed: [] };
 
-    // get saves for this movie
-    const { data: saves, error: savesError } = await this.supabase
+    // fetch customers who saved this movie with their emails in one query
+    const { data: savesWithCustomers, error: savesError } = await this.supabase
       .from('saves')
-      .select('customer_id')
+      .select(`
+        customer_id,
+        customers!inner(email, full_name)
+      `)
       .eq('movie_id', movieId);
 
     if (savesError) throw savesError;
-    if (!saves || saves.length === 0) {
+    if (!savesWithCustomers || savesWithCustomers.length === 0) {
       return { total: 0, sent: 0, failed: [] };
     }
 
-    const customerIds = [
-      ...new Set(saves.map((s) => s.customer_id).filter(Boolean)),
-    ];
+    // extract unique emails
+    const emailSet = new Set<string>();
+    const customers = savesWithCustomers
+      .map((s: any) => s.customers)
+      .filter((c: any) => c && c.email)
+      .filter((c: any) => {
+        if (emailSet.has(c.email)) return false;
+        emailSet.add(c.email);
+        return true;
+      });
 
-    // fetch customers' emails
-    const { data: customers, error: custErr } = await this.supabase
-      .from('customers')
-      .select('customer_id, email, full_name')
-      .in('customer_id', customerIds);
-
-    if (custErr) throw custErr;
-    if (!customers || customers.length === 0) {
-      return { total: customerIds.length, sent: 0, failed: [] };
+    if (customers.length === 0) {
+      return { total: savesWithCustomers.length, sent: 0, failed: [] };
     }
 
-    // fetch movie title
-    const { data: movieData } = await this.supabase
-      .from('movies')
-      .select('title')
-      .eq('movie_id', movieId)
-      .single();
-
-    // try fetch cinema name
-    const cinemaId =
-      (showtimeData as any)?.rooms?.cinema_id ??
-      (Array.isArray((showtimeData as any)?.rooms)
-        ? (showtimeData as any).rooms[0]?.cinema_id
-        : undefined);
-    let cinemaName: string | undefined = undefined;
-    if (cinemaId) {
-      const { data: cinemaData } = await this.supabase
-        .from('cinemas')
-        .select('name')
-        .eq('cinema_id', cinemaId)
-        .single();
-      cinemaName = cinemaData?.name;
-    }
-
-    const movieTitle = movieData?.title || '';
+    const movieTitle = (showtimeData as any)?.movies?.title || '';
     const showtimeStr = showtimeData?.start_time || null;
+    const cinemaName = (showtimeData as any)?.rooms?.cinemas?.name || undefined;
 
-    // send emails
-    const emails = customers.map((c) => c.email).filter(Boolean);
-    const results = await Promise.allSettled(
-      emails.map((email) =>
-        this.emailService.sendNewShowtimeNotification(email, {
-          movie_title: movieTitle,
-          showtime: showtimeStr,
-          cinema_name: cinemaName,
-        }),
-      ),
-    );
+    // send emails in batches to avoid SMTP timeout
+    const emails = customers.map((c: any) => c.email);
+    const BATCH_SIZE = 5;
+    const BATCH_DELAY = 500; // ms between batches
+    const failed: string[] = [];
+    let sent = 0;
 
-    const failed = results
-      .map((r, i) => ({ r, email: emails[i] }))
-      .filter((x) => x.r.status === 'rejected')
-      .map((x) => x.email);
+    for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+      const batch = emails.slice(i, i + BATCH_SIZE);
 
-    const sent = emails.length - failed.length;
+      const results = await Promise.allSettled(
+        batch.map((email) =>
+          Promise.race([
+            this.emailService.sendNewShowtimeNotification(email, {
+              movie_title: movieTitle,
+              showtime: showtimeStr,
+              cinema_name: cinemaName,
+            }),
+            new Promise((_, reject) =>
+              setTimeout(
+                () => reject(new Error('Email send timeout')),
+                8000, // 8 seconds per email
+              ),
+            ),
+          ]),
+        ),
+      );
+
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          sent++;
+        } else {
+          failed.push(batch[index]);
+        }
+      });
+
+      // delay between batches to prevent SMTP overload
+      if (i + BATCH_SIZE < emails.length) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
+      }
+    }
+
     return { total: emails.length, sent, failed };
   }
 
