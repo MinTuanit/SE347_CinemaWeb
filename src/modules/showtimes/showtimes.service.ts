@@ -89,24 +89,48 @@ export class ShowtimesService {
     const showtimeStr = showtimeData?.start_time || null;
     const cinemaName = (showtimeData as any)?.rooms?.cinemas?.name || undefined;
 
-    // send emails concurrently
+    // send emails in batches to avoid SMTP timeout
     const emails = customers.map((c: any) => c.email);
-    const results = await Promise.allSettled(
-      emails.map((email) =>
-        this.emailService.sendNewShowtimeNotification(email, {
-          movie_title: movieTitle,
-          showtime: showtimeStr,
-          cinema_name: cinemaName,
-        }),
-      ),
-    );
+    const BATCH_SIZE = 5;
+    const BATCH_DELAY = 500; // ms between batches
+    const failed: string[] = [];
+    let sent = 0;
 
-    const failed = results
-      .map((r, i) => ({ r, email: emails[i] }))
-      .filter((x) => x.r.status === 'rejected')
-      .map((x) => x.email);
+    for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+      const batch = emails.slice(i, i + BATCH_SIZE);
 
-    const sent = emails.length - failed.length;
+      const results = await Promise.allSettled(
+        batch.map((email) =>
+          Promise.race([
+            this.emailService.sendNewShowtimeNotification(email, {
+              movie_title: movieTitle,
+              showtime: showtimeStr,
+              cinema_name: cinemaName,
+            }),
+            new Promise((_, reject) =>
+              setTimeout(
+                () => reject(new Error('Email send timeout')),
+                8000, // 8 seconds per email
+              ),
+            ),
+          ]),
+        ),
+      );
+
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          sent++;
+        } else {
+          failed.push(batch[index]);
+        }
+      });
+
+      // delay between batches to prevent SMTP overload
+      if (i + BATCH_SIZE < emails.length) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
+      }
+    }
+
     return { total: emails.length, sent, failed };
   }
 
